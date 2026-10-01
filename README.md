@@ -29,7 +29,7 @@ The maintainer runs on OpenOS, so install it to the hard drive first:
 Download it (run the same command again later to update)
 
 ```bash
-wget -f https://raw.githubusercontent.com/Willshaper/Level-Maintainer/master/installer.lua && installer
+wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua && installer
 ```
 
 The installer replaces the scripts but keeps an existing `config.lua` and `settings.lua`. It then asks:
@@ -181,3 +181,54 @@ Reloaded config.lua (1 added, 0 changed, 0 removed)
 and starts a new cycle with it. If a saved file has a mistake, it logs the error and keeps using the previous version until a fixed one is saved.
 
 On a server you usually can't reach these files, so leave it off.
+
+
+
+## Adaptive polling and refill targets
+
+Existing `{threshold, batch, fluidName?}` entries still request the fixed batch
+whenever stock is below the threshold. `{nil, batch}` keeps continuous production.
+Stocked entries now wait between targeted inventory checks instead of querying
+on every cycle. No bulk inventory scans or storage event subscriptions are used.
+
+For optional hysteresis, use named fields in either `cfg.items` or `cfg.fluids`:
+
+```lua
+["Osmium Dust"] = {low = 10000, target = 15000, batch = 1000},
+-- Native fluid amounts and batches are in mB:
+["Molten SpaceTime"] = {low = 100000, target = 150000, batch = 10000},
+-- For fluid drops in cfg.items, supply the registry name:
+["drop of Molten SpaceTime"] = {
+    low = 100000, target = 150000, batch = 10000, fluidName = "spacetime"
+},
+```
+
+Production starts strictly below `low`, then continues until observed stock
+reaches `target`, even if it has already recovered above `low`. Each request is
+`min(batch, ceil(target - stock))`: batch is a cap on each job, so choose a larger
+batch to reduce crafting calculations. Recipe rounding and simultaneous producers
+may still overshoot the target. Stock is refreshed after completed crafts; failed
+requests retain refill state and use the existing retry cooldown. On restart,
+refill state resets: stock between low and target stays idle until it drops below
+low again. Changing an entry also resets its state; unchanged entries retain it
+across config reloads. The UI's Want column shows low while idle and target while
+refilling. Gray stock is the last observation, not a live inventory value.
+
+`settings.thresholdIntervals = {15, 30, 60, 120, 300}` sets the seconds between
+stock checks for stock/low ratios below 1.25, 2, 5, 10, and otherwise. Set every
+value to 0 to check each cycle. With low = 0, the last interval applies. The main
+cycle interval (`settings.sleep`, normally 10 seconds) still controls CPU polling
+and rounds stock checks to the next cycle. A sudden large withdrawal may therefore
+wait up to its scheduled interval plus one cycle before replenishment starts;
+choose shorter intervals for critical stock. Entries currently crafting or in a
+retry cooldown do not query inventory. CPU availability checks, fairness, cached
+craftables, and error recovery remain in place.
+
+The installer and installation command use this fork. Existing settings files
+are preserved, with defaults supplying the new option on older installations.
+
+### Validation
+
+Run `lua tests/maintenance.lua` from the repository root (Lua 5.2+).
+Tests mock the OC/AE2 boundary; testing on a running GTNH server is still required
+for real crafting behavior and server-load measurements.

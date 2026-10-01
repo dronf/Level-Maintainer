@@ -3,8 +3,8 @@ local filesystem = require("filesystem")
 local component = require("component")
 local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "Maintainer.lua"}
 
-local repo = "https://raw.githubusercontent.com/Willshaper/Level-Maintainer/";
-local api = "https://api.github.com/repos/Willshaper/Level-Maintainer/commits/";
+local repo = "https://raw.githubusercontent.com/dronf/Level-Maintainer/";
+local api = "https://api.github.com/repos/dronf/Level-Maintainer/commits/";
 local branch = "master"
 local dir = shell.getWorkingDirectory()
 

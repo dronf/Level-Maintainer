@@ -3,6 +3,19 @@ local computer = require("computer")
 
 local AE2 = {}
 
+-- State belongs to the entry, not the craftable cache.
+function AE2.refillDecision(state, amount, low, target, batch)
+    if target == nil then return amount < low, batch end
+    if amount >= target then state.refilling = false
+    elseif amount < low then state.refilling = true end
+    return state.refilling == true, math.min(batch, math.ceil(target - amount))
+end
+
+local function requestCount(amount, threshold, count, policy)
+    if not policy or not policy.target then return amount < threshold, count end
+    return AE2.refillDecision(policy.state, amount, threshold, policy.target, count)
+end
+
 -- Resolved on demand so the script can start (and wait) before the interface is attached
 local ME = nil
 
@@ -89,14 +102,14 @@ end
 
 -- requestItem and requestFluid return: success, message, result ("requested", "failed",
 -- "stocked" or "missing"), and the amount in stock when it was checked (threshold set).
-function AE2.requestItem(name, threshold, count, fluidName)
+function AE2.requestItem(name, threshold, count, fluidName, policy)
     local craftable, item = getCraftableForItem(name)
     local amount = nil
 
     if craftable then
         -- A fluid listed under cfg.items: check its stock as a fluid, not as an item
         if isFluidStack(item) then
-            return AE2.requestFluid(name, threshold, count)
+            return AE2.requestFluid(name, threshold, count, nil, policy)
         end
         if threshold ~= nil then
             local itemInSystem = nil
@@ -119,8 +132,10 @@ function AE2.requestItem(name, threshold, count, fluidName)
             end
 
             amount = itemInSystem and itemInSystem.size or 0 -- not found = none stored
-            if itemInSystem ~= nil and amount >= threshold then
-                return false, "The amount of " .. (itemInSystem.label or name) .. " (" .. amount .. ") meets or exceeds threshold (" .. threshold .. ")! Aborting request.", "stocked", amount
+            local needed
+            needed, count = requestCount(amount, threshold, count, policy)
+            if not needed then
+                return false, name .. " stock (" .. amount .. ") is satisfied.", "stocked", amount
             end
         end
 
@@ -139,7 +154,7 @@ end
 -- Native fluid maintenance via getFluidInNetwork (GTNH 2.9+).
 -- `name` is the fluid craftable label; `fluidName` is the fluid registry name and is
 -- auto-detected from the craftable's stack if omitted (pass it only as an override).
-function AE2.requestFluid(name, threshold, count, fluidName)
+function AE2.requestFluid(name, threshold, count, fluidName, policy)
     local craftable, stack = getCraftableForItem(name)
     local amount = nil
 
@@ -148,7 +163,7 @@ function AE2.requestFluid(name, threshold, count, fluidName)
             if not fluidName then
                 -- An item listed under cfg.fluids: check its stock as an item
                 if not isFluidStack(stack) then
-                    return AE2.requestItem(name, threshold, count)
+                    return AE2.requestItem(name, threshold, count, nil, policy)
                 end
                 fluidName = stack.name
             end
@@ -156,8 +171,10 @@ function AE2.requestFluid(name, threshold, count, fluidName)
             if fluidName and ME.getFluidInNetwork then
                 local fluidInSystem = ME.getFluidInNetwork(fluidName)
                 amount = fluidInSystem and (fluidInSystem.size or fluidInSystem.amount) or 0 -- not found = none stored
-                if fluidInSystem ~= nil and amount >= threshold then
-                    return false, "The amount of " .. (fluidInSystem.label or name) .. " (" .. amount .. " mB) meets or exceeds threshold (" .. threshold .. " mB)! Aborting request.", "stocked", amount
+                local needed
+                needed, count = requestCount(amount, threshold, count, policy)
+                if not needed then
+                    return false, name .. " stock (" .. amount .. " mB) is satisfied.", "stocked", amount
                 end
             end
         end

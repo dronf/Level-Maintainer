@@ -1,6 +1,9 @@
 local cfg = {}
 
 -- EXAMPLE --
+-- Optional hysteresis (also works for cfg.fluids, with mB units):
+-- ["Osmium Dust"] = {low = 10000, target = 15000, batch = 1000}
+-- Starts below low, then refills to target; batch caps each request.
 
 -- [item_or_fluid_name] = {threshold, batch_size, fluid_name} -- fluid_name only for a threshold on fluid drops
 -- ["Osmium Dust"] = {nil, 64} -- regular item without threshold

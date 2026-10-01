@@ -5,8 +5,13 @@ local settings = {}
 -- Changes take effect the next time Maintainer starts (no reboot needed), or
 -- while it runs if live reload (reloadCheck, at the bottom) is on.
 
--- Seconds to wait between cycles. Each cycle checks every configured entry once.
+-- Seconds to wait between cycles. Each cycle visits every entry; stocked entries query only when due.
 settings.sleep = 10
+
+-- Stock/low ratios <1.25, <2, <5, <10, and otherwise.
+-- Seconds between targeted stock checks; 0 = check each cycle.
+-- Sudden consumption can delay replenishment by this interval plus one cycle.
+settings.thresholdIntervals = {15, 30, 60, 120, 300}
 
 -- After a crafting request fails (missing ingredients, no suitable CPU, ...),
 -- wait this many seconds before calculating that entry again.
@@ -78,3 +83,4 @@ settings.cpuDisplay = "free"
 settings.reloadCheck = 0
 
 return settings
+
