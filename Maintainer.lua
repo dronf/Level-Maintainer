@@ -57,6 +57,7 @@ local function buildSettings(userSettings, cfg)
         showRecent = true,
         layout = "fit",
         cpuDisplay = "free",
+        thresholdIntervals = {15, 30, 60, 120, 300},
     }
     for k, v in pairs(userSettings or {}) do
         s[k] = v
@@ -160,6 +161,18 @@ local function skip(name, status, message)
 end
 
 local retryAt = {} -- name -> uptime before which a failed entry is not calculated again
+local stockState = {} -- entry table -> {refilling, checkAt}; survives unchanged config reloads
+
+local function thresholdDelay(amount, threshold)
+    local ratio = threshold > 0 and amount / threshold or math.huge
+    local tier = ratio < 1.25 and 1 or ratio < 2 and 2 or ratio < 5 and 3 or ratio < 10 and 4 or 5
+    local intervals = settings.thresholdIntervals
+    local delay = type(intervals) == "table" and tonumber(intervals[tier])
+    if not delay or delay ~= delay or delay == math.huge or delay < 0 then
+        delay = ({15, 30, 60, 120, 300})[tier]
+    end
+    return delay
+end
 local lastConfig = nil -- config in use, to tell which entries changed on reload
 local warnedCpuName = false
 local turn = 0 -- which entry goes first this cycle; moves on by one every cycle
@@ -180,19 +193,30 @@ end
 
 local function maintain(name, config, request)
     local now = computer.uptime()
+    local state = stockState[config]
+    if not state then
+        state = {}
+        stockState[config] = state
+    end
     if itemsCrafting[name] == true then
+        state.checkAt = nil -- refresh stock as soon as the job finishes
         skip(name, "crafting", name .. " is already being crafted, skipping...")
     elseif retryAt[name] and now < retryAt[name] then
         skip(name, "retry", name .. " failed recently, retrying in " .. math.ceil(retryAt[name] - now) .. "s")
+    elseif state.checkAt and now < state.checkAt then
+        -- Preserve the stocked status and last observed quantity.
+        return
     elseif not cpuAvailable() then
         skip(name, "nocpu", name .. ": no free crafting CPU, skipping...")
     else
-        local success, answer, result, amount = try(request, name, config[1], config[2], config[3])
+        local success, answer, result, amount = try(request, name, config[1], config[2], config[3],
+            {target = config.target, state = state})
         if amount ~= nil then
             lastAmount[name] = amount
             amountCycle[name] = cycleNumber
         end
         if result == "stocked" then
+            state.checkAt = computer.uptime() + thresholdDelay(amount, config[1])
             skip(name, "stocked", answer)
         elseif result == "missing" then
             logStatus(name, "missing", answer)
@@ -212,6 +236,8 @@ local function maintain(name, config, request)
             logInfo(answer) -- "Requested ...": an action, always logged
             currentStatus[name] = result
         end
+
+        if result ~= "stocked" then state.checkAt = nil end
 
         if result ~= "failed" then
             retryAt[name] = nil
@@ -296,7 +322,8 @@ local function render(title)
             stock = formatAmount(lastAmount[entry.name]),
             -- Not read this cycle (crafting, waiting to retry or for a CPU): shown in gray
             stockFrozen = lastAmount[entry.name] ~= nil and amountCycle[entry.name] ~= cycleNumber,
-            want = formatAmount(entry.config[1]),
+            want = formatAmount(stockState[entry.config] and stockState[entry.config].refilling
+                and entry.config.target or entry.config[1]),
             batch = formatAmount(entry.config[2]),
             status = look[1],
             shortStatus = look[3] or look[1],
@@ -317,7 +344,10 @@ local function sameEntry(a, b)
     if type(a) ~= "table" or type(b) ~= "table" then
         return a == b
     end
-    return a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
+    return (a.low or a[1]) == (b.low or b[1])
+        and (a.batch or a[2]) == (b.batch or b[2])
+        and (a.fluidName or a[3]) == (b.fluidName or b[3])
+        and a.target == b.target
 end
 
 -- Returns nil if a config entry is usable, otherwise what is wrong with it
@@ -328,6 +358,20 @@ local function entryProblem(name, conf)
     if type(conf) ~= "table" then
         return "the value must look like {threshold, batch_size}"
     end
+    local function finite(n)
+        return type(n) == "number" and n == n and n > -math.huge and n < math.huge
+    end
+    local low, batch = conf.low or conf[1], conf.batch or conf[2]
+    if low ~= nil and (not finite(low) or low < 0) then
+        return "the threshold/low must be a finite nonnegative number"
+    end
+    if not finite(batch) or batch < 1 or batch % 1 ~= 0 then
+        return "the batch must be a positive whole number"
+    end
+    if conf.target ~= nil and (not finite(conf.target) or low == nil or conf.target < low) then
+        return "target must be finite and at least low, with low specified"
+    end
+    conf[1], conf[2], conf[3] = low, batch, conf.fluidName or conf[3]
     if conf[1] ~= nil and type(conf[1]) ~= "number" then
         return "the threshold must be a number or nil"
     end
@@ -398,6 +442,18 @@ local function applyConfig(cfg)
         fluids = nil
     end
 
+    local retainedState = {}
+    local function retain(block, oldBlock)
+        for name, conf in pairs(block or {}) do
+            local previous = oldBlock and oldBlock[name]
+            if previous and sameEntry(previous, conf) then
+                retainedState[conf] = stockState[previous]
+            end
+        end
+    end
+    retain(items, lastConfig and lastConfig.items)
+    retain(fluids, lastConfig and lastConfig.fluids)
+    stockState = retainedState
     entries = {}
     for name, conf in pairs(items) do
         table.insert(entries, {name = name, config = conf, request = ae2.requestItem})
