@@ -27,6 +27,7 @@ local page = 1 -- which page of the table is shown when it has more rows than fi
 -- "columns": keep the resolution and put the rows in side-by-side tables when there is room
 -- "fixed": keep the resolution, one table
 -- "tall": like "fit", always with narrow columns and short status words
+-- "wide": like "fit", but keeps full-width columns on portrait screens
 local layoutMode = "fit"
 local originalResolution = nil -- {width, height} before the maintainer changed it
 local screenRatio = nil -- resolution width per line of height that fills the screen exactly
@@ -217,7 +218,7 @@ end
 -- Puts the screen in the resolution the layout wants: fitted for "fit" and "tall",
 -- the resolution from before the maintainer started for the others
 local function applyResolution()
-    if layoutMode == "fit" or layoutMode == "tall" then
+    if layoutMode == "fit" or layoutMode == "tall" or layoutMode == "wide" then
         setResolution(fitResolution())
     elseif originalResolution then
         setResolution(originalResolution[1], originalResolution[2])
@@ -494,9 +495,9 @@ function Display.setShowRecent(show)
     end
 end
 
--- "fit", "tall", "columns" or "fixed" (anything else counts as "fit")
+-- "fit", "wide", "tall", "columns" or "fixed" (anything else counts as "fit")
 function Display.setLayout(mode)
-    if mode ~= "columns" and mode ~= "fixed" and mode ~= "tall" then
+    if mode ~= "columns" and mode ~= "fixed" and mode ~= "tall" and mode ~= "wide" then
         mode = "fit"
     end
     if mode ~= layoutMode then
@@ -578,3 +579,4 @@ function Display.update(newRows, newHeader, newFooter, newFooterShort, newFooter
 end
 
 return Display
+

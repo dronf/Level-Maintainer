@@ -64,6 +64,8 @@ settings.showRecent = true
 --               largest text that fits (matched to the screen's shape, e.g. 2x2 or
 --               3x2 blocks). The old resolution comes back when the maintainer stops.
 --               On a screen taller than wide it uses the narrow columns of "tall".
+--   "wide"    - like "fit", but keeps full-width name columns on tall screens.
+--               Text may be smaller so long names fit.
 --   "columns" - keeps the resolution and puts the rows in side-by-side tables when
 --               the screen is wide enough.
 --   "fixed"   - keeps the resolution, one table.
@@ -83,4 +85,5 @@ settings.cpuDisplay = "free"
 settings.reloadCheck = 0
 
 return settings
+
 

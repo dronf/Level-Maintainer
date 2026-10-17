@@ -1,0 +1,77 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const http = require('node:http');
+const path = require('node:path');
+const {chromium} = require('playwright');
+const artifacts = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'maintainer-editor-'));
+const root = path.join(__dirname, '../docs');
+(async () => {
+  const server = http.createServer((req, res) => {
+    const file = req.url.split('?')[0] === '/config.js' ? 'config.js' : 'index.html';
+    res.setHeader('Content-Type', file.endsWith('.js') ? 'application/javascript' : 'text/html');
+    res.end(fs.readFileSync(path.join(root, file)));
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  let browser;
+  try {
+    browser = await chromium.launch({channel: process.env.PLAYWRIGHT_CHANNEL || undefined, headless: true});
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    await page.locator('#f-name').fill('P-507');
+    await page.locator('#f-maintain').fill('4k');
+    await page.locator('#f-target').fill('8k');
+    await page.locator('#f-batch').fill('1k');
+    await page.locator('#f-block').selectOption('fluids');
+    await page.locator('#save-btn').click();
+    assert((await page.locator('#preview').textContent()).includes('low = 4000, target = 8000, batch = 1000'));
+    await page.reload();
+    assert.equal(await page.locator('#entries tr[data-index]').count(), 1);
+    await page.locator('#entries tr[data-index]').click();
+    assert.equal(await page.locator('#f-target').inputValue(), '8k');
+    assert.equal(await page.locator('#f-block').inputValue(), 'fluids');
+    await page.locator('#new-btn').click();
+    await page.locator('#f-name').fill('Carbon Dust');
+    await page.locator('#f-maintain').fill('256');
+    await page.locator('#f-batch').fill('64');
+    await page.locator('#save-btn').click();
+    await page.locator('#entries input[type=checkbox]').first().uncheck();
+    await page.locator('#import-lines-btn').click();
+    await page.locator('#import-text').fill('["Unsupported"] = {low = 10, target = 5, batch = 1}');
+    await page.locator('#import-ok').click();
+    assert.equal(await page.locator('#entries tr[data-index]').count(), 2);
+    assert((await page.locator('#status').textContent()).includes('Nothing imported'));
+    await page.locator('#import-cancel').click();
+    await page.locator('#import-lines-btn').click();
+    await page.locator('#import-text').fill('cfg["items"] = {\n["Third"] = {low = 10, target = 20, batch = 5},\n}');
+    await page.locator('#import-ok').click();
+    assert.equal(await page.locator('#entries tr[data-index]').count(), 3);
+    const [backup] = await Promise.all([page.waitForEvent('download'), page.locator('#export').click()]);
+    const backupPath = path.join(artifacts, 'browser-backup.json');
+    await backup.saveAs(backupPath);
+    const data = JSON.parse(fs.readFileSync(backupPath));
+    assert.equal(data.lists[0].entries[0].Target, 8000);
+    assert.equal(data.lists[0].entries[0].Block, 'fluids');
+    page.on('dialog', d => d.accept());
+    await page.locator('#file-input').setInputFiles(backupPath);
+    assert.equal(await page.locator('#list-select option').count(), 2);
+    assert.equal(await page.locator('#entries tr[data-index]').count(), 3);
+    // Verify the actual share-link payload and acceptance preserve target/block.
+    const payload = await page.evaluate(() => ({n: 'Shared', e: currentList().entries.map(e =>
+      [e.name, e.threshold, e.count, e.fluid, e.enabled === false ? 0 : 1, e.target, e.block])}));
+    const hash = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    await page.goto(`http://127.0.0.1:${server.address().port}/#share=${hash}`);
+    await page.locator('#share-add').click();
+    assert.equal(await page.locator('#list-select option').count(), 3);
+    assert((await page.locator('#preview').textContent()).includes('target = 8000'));
+    await page.setViewportSize({width: 390, height: 844});
+    await page.screenshot({path: path.join(artifacts, 'editor-mobile.png'), fullPage: true});
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.setViewportSize({width: 1200, height: 1000});
+    await page.screenshot({path: path.join(artifacts, 'editor-desktop.png'), fullPage: true});
+    assert.deepEqual(errors, []);
+    fs.writeFileSync(path.join(artifacts, 'editor-export.lua'), await page.locator('#preview').textContent());
+    console.log('PASS: browser add/edit/reload, disabled entries, atomic import, backup import/export, share links, mobile layout, no JS errors');
+  } finally { if (browser) await browser.close(); server.close(); }
+})().catch(e => { console.error(e); process.exitCode = 1; });
