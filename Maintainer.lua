@@ -191,7 +191,7 @@ local function cpuAvailable()
     return freeCpus > 0
 end
 
-local function maintain(name, config, request)
+local function maintainOnce(name, config, request)
     local now = computer.uptime()
     local state = stockState[config]
     if not state then
@@ -245,12 +245,50 @@ local function maintain(name, config, request)
 
         -- The job now occupies a CPU for the rest of this cycle
         if success then
+            itemsCrafting[name] = true
             freeCpus = freeCpus - 1
             if useNamedCpu then
                 cpuBusy[settings.cpuName] = true
             end
         end
     end
+end
+
+-- Timed entries only get their shorter cadence after hysteresis has activated.
+-- Each deadline is measured from the completed check; overdue slots never queue up.
+local function maintain(name, config, request)
+    local state = stockState[config]
+    if config.refillInterval and state and state.refilling and state.refillAt
+        and computer.uptime() < state.refillAt then
+        return
+    end
+    maintainOnce(name, config, request)
+    state = stockState[config]
+    if state then
+        if config.refillInterval and state.refilling then
+            state.refillAt = math.max(computer.uptime() + config.refillInterval, retryAt[name] or 0)
+        else
+            state.refillAt = nil
+        end
+    end
+end
+
+-- CPU/job snapshots are refreshed for ordinary cycles and due refill passes.
+local function refreshCrafting()
+    local ok
+    ok, itemsCrafting, freeCpus, cpuBusy, totalCpus = pcall(ae2.checkIfCrafting)
+    if not ok then
+        logInfo("ERROR: " .. tostring(itemsCrafting))
+        ae2.clearCache()
+        itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
+        return false
+    end
+    useNamedCpu = settings.cpuName ~= nil and cpuBusy[settings.cpuName] ~= nil
+    if settings.cpuName ~= nil and not useNamedCpu and not warnedCpuName then
+        logInfo("WARNING: no crafting CPU named '" .. settings.cpuName .. "' found, AE2 will use any CPU.")
+        warnedCpuName = true
+    end
+    return true
 end
 
 -- 11968656 -> "11.97M"
@@ -348,6 +386,7 @@ local function sameEntry(a, b)
         and (a.batch or a[2]) == (b.batch or b[2])
         and (a.fluidName or a[3]) == (b.fluidName or b[3])
         and a.target == b.target
+        and a.refillInterval == b.refillInterval
 end
 
 -- Returns nil if a config entry is usable, otherwise what is wrong with it
@@ -370,6 +409,10 @@ local function entryProblem(name, conf)
     end
     if conf.target ~= nil and (not finite(conf.target) or low == nil or conf.target < low) then
         return "target must be finite and at least low, with low specified"
+    end
+    if conf.refillInterval ~= nil and (not finite(conf.refillInterval)
+        or conf.refillInterval <= 0 or conf.target == nil) then
+        return "refillInterval must be a finite positive number of seconds, with low and target specified"
     end
     conf[1], conf[2], conf[3] = low, batch, conf.fluidName or conf[3]
     if conf[1] ~= nil and type(conf[1]) ~= "number" then
@@ -568,12 +611,17 @@ end
 -- Waits settings.sleep seconds, listening for keys. An edit or reload, or a live
 -- reload check that finds a saved file, ends the wait early so the new config is
 -- used right away.
+local refillTurn = 0
 local function waitForNextCycle()
     local deadline = nextCycleAt or (computer.uptime() + settings.sleep)
     repeat
         local wake = deadline
+        for _, entry in ipairs(entries) do
+            local state = stockState[entry.config]
+            if state and state.refillAt then wake = math.min(wake, state.refillAt) end
+        end
         if (tonumber(settings.reloadCheck) or 0) > 0 then
-            wake = math.min(deadline, nextReloadCheck)
+            wake = math.min(wake, nextReloadCheck)
         end
         local action = idle(math.max(0, wake - computer.uptime()))
         if action then
@@ -589,6 +637,35 @@ local function waitForNextCycle()
         if checkForEdits() then
             return
         end
+        -- A timer wake only visits active, due refills. Ordinary entries retain
+        -- their cycle and adaptive stock-check deadlines.
+        if computer.uptime() < deadline then
+            local due = {}
+            for _, entry in ipairs(entries) do
+                local state = stockState[entry.config]
+                if state and state.refillAt and state.refillAt <= computer.uptime() then
+                    due[#due + 1] = entry
+                end
+            end
+            if #due > 0 then
+                cycleNumber = cycleNumber + 1
+                display.beginBatch()
+                local ready = refreshCrafting()
+                local first = refillTurn % #due
+                for i = 0, #due - 1 do
+                    local entry = due[(first + i) % #due + 1]
+                    if ready then
+                        maintain(entry.name, entry.config, entry.request)
+                    else
+                        local state = stockState[entry.config]
+                        state.refillAt = computer.uptime() + entry.config.refillInterval
+                    end
+                end
+                refillTurn = refillTurn + 1
+                render()
+                display.endBatch()
+            end
+        end
     until computer.uptime() >= deadline
 end
 
@@ -598,20 +675,7 @@ local function run()
         cycleNumber = cycleNumber + 1
         display.beginBatch()
 
-        local ok
-        ok, itemsCrafting, freeCpus, cpuBusy, totalCpus = pcall(ae2.checkIfCrafting)
-        if not ok then
-            -- The network can't be read right now; requests would fail too, so wait for the next cycle
-            logInfo("ERROR: " .. tostring(itemsCrafting))
-            ae2.clearCache()
-            itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
-        else
-            useNamedCpu = settings.cpuName ~= nil and cpuBusy[settings.cpuName] ~= nil
-            if settings.cpuName ~= nil and not useNamedCpu and not warnedCpuName then
-                logInfo("WARNING: no crafting CPU named '" .. settings.cpuName .. "' found, AE2 will use any CPU.")
-                warnedCpuName = true
-            end
-
+        if refreshCrafting() then
             -- Start one entry further along each cycle, so with few free CPUs every
             -- entry gets its turn instead of the same one winning every time
             local count = #entries

@@ -29,6 +29,20 @@ assert.equal(c.importText('["Multi"] = {\n low = 10,\n target = 20,\n batch = 5,
 assert.equal(c.importText('["Override"] = {low = 1, target = 2, batch = 1, fluidName = "x"},')[0].fluid, 'x');
 const quotedName = c.cleanEntry({name: '"Quoted name"', count: 1, threshold: 10});
 assert.equal(c.importText(c.formatConfigFile([quotedName]))[0].name, quotedName.name);
+const timed = c.makeEntry('Fast Fluid', '100', '40', 'fast', '200', 'fluids', false, '0.5');
+assert.equal(timed.refillInterval, 0.5);
+assert(c.formatEntry(timed).includes('refillInterval = 0.5'));
+assert.deepEqual(c.importText(c.formatConfigFile([timed])), [timed]);
+assert.deepEqual(c.cleanEntry(JSON.parse(JSON.stringify(timed))), timed);
+const tinyInterval = c.makeEntry('Small interval', '10', '1', '', '20', 'items', false, '0.0000001');
+assert.deepEqual(c.importText(c.formatConfigFile([tinyInterval])), [tinyInterval]);
+assert.equal(c.cleanEntry({Name: 'Old', Threshold: 10, Count: 5}).refillInterval, null);
+assert.equal(c.cleanEntry({Name: 'Fast', Threshold: 10, Target: 20, Count: 5, RefillInterval: 2}).refillInterval, 2);
+for (const bad of ['0', '-1', 'Infinity', 'NaN', '2k', '']) {
+  if (bad !== '') assert.throws(() => c.makeEntry('Fast', '10', '5', '', '20', 'items', false, bad));
+}
+assert.throws(() => c.makeEntry('Fast', '10', '5', '', '', 'items', false, '2'));
+assert.throws(() => c.importText('["Bad timer"] = {low = 10, target = 20, batch = 5, refillInterval = 0}'));
 for (const invalid of [
   '["Bad"] = {low = 10, target = 5, batch = 1}',
   '["Bad"] = {low = 10, batch = 1}',
@@ -47,6 +61,8 @@ for (const input of [text, 'x'.repeat(3500), '😀'.repeat(2501), 'line\n'.repea
 assert.throws(() => c.cleanEntries([{Name: 'Invalid', Count: 0}]));
 assert.throws(() => c.makeEntry('Test', '100', '10', '', '50'));
 const html = fs.readFileSync(require.resolve('../docs/index.html'), 'utf8');
+assert(!html.includes('tokens truncated'), 'editor source must not contain truncated transfer output');
+assert(html.includes('</style>') && html.includes('<body>') && html.includes('id="entry-form"'));
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 if (process.env.EDITOR_CONFIG_OUTPUT) fs.writeFileSync(process.env.EDITOR_CONFIG_OUTPUT, text);
 console.log('PASS: editor Lua round trips, refill targets, legacy backups, invalid imports, plain numbers and paste chunks');
