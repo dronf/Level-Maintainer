@@ -32,7 +32,12 @@ Download it (run the same command again later to update)
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua && installer
 ```
 
-The installer replaces the scripts but keeps an existing `config.lua` and `settings.lua`. It then asks:
+The installer replaces the scripts and keeps an existing `config.lua`. When the
+settings template has new options or updated explanations, it offers to refresh
+`settings.lua`, preserving your values (including `thresholdIntervals` tables and
+custom settings) and saving the previous file as `settings.lua.old`. Declining
+keeps your settings unchanged; an unreadable file is also left untouched.
+It then asks:
 
 - **Start Maintainer automatically when the computer boots?** Adds a line to `/home/.shrc`.
 - **Turn the computer on when it receives a redstone signal?** Only asked when a redstone card is installed.
@@ -117,6 +122,41 @@ A computer that runs out of power switches off and stays off. To have it switch 
 Each pulse turns the computer on if it is off; a running computer ignores it. With auto-start on, the maintainer starts with it.
 
 # Config
+
+## Browser config editor
+
+The [Config List editor](docs/index.html) builds `config.lua` without editing Lua
+by hand. Download the repository and open `docs/index.html` in a browser, keeping
+`docs/config.js` beside it. No Minecraft mod or server installation is needed for
+the editor. It works offline and stores named lists in that browser; export a
+backup before clearing site data or changing browsers.
+
+- Enter **Name**, **Maintain / Low**, and **Batch Amount**. Hover an item or fluid
+  in NEI and press Ctrl+C to copy its label.
+- Leave **Refill target** blank for ordinary threshold behavior. Set it to use
+  this fork's low/target hysteresis: start below Low, then refill to Target with
+  each request capped by Batch. In simple mode, blank/0 Maintain means continuous
+  crafting; with a Target, Low 0 is an actual zero threshold.
+- Choose the item/auto-detected-fluid or fluid section. An optional registry-name
+  override supports old fluid drops and ambiguous fluid labels.
+- Inputs accept `k`, `m`, `g`/`b`, and `t`; the generated file uses **plain Lua
+  numbers**, so no new config parser is required in OpenComputers.
+- Import positional or named low/target entries, including multiline entries and
+  disabled lines. Unsupported expressions or entries stop the entire import
+  with an error. The editor does not execute imported Lua.
+- Download the full file, copy it, or use **Copy next part** for OpenComputers'
+  1,024-character paste limit. Press E in the maintainer, replace the existing
+  file contents, paste the parts in order, save with Ctrl+S and close with Ctrl+W.
+- Backups preserve refill targets, item/fluid sections, overrides, and disabled
+  entries. Old upstream/PowerShell backups can also be imported.
+- Share links work when the editor is served over HTTP(S). For local files use
+  backup export/import instead. GitHub Pages can serve the `docs/` directory if
+  hosting is enabled for the repository; this change does not enable hosting.
+
+The editor is adapted from [Willshaper's Config List editor](https://github.com/Willshaper/Level-Maintainer/tree/ba32287d00dabf15ca6f96756d7cf9f0bc2c10d6/docs),
+with compatibility for this fork's refill targets and standard Lua loader.
+
+## Config format
 
 You can change maintained items in `config.lua`. There are two blocks, `cfg.items` and `cfg.fluids`. Items and fluids work in either one: the maintainer checks what each entry actually is and uses the right stock check. The simplest setup is to put everything in `cfg.items`.
 
@@ -224,11 +264,30 @@ choose shorter intervals for critical stock. Entries currently crafting or in a
 retry cooldown do not query inventory. CPU availability checks, fairness, cached
 craftables, and error recovery remain in place.
 
-The installer and installation command use this fork. Existing settings files
-are preserved, with defaults supplying the new option on older installations.
+The installer and installation command use this fork. Settings refreshes preserve
+your polling intervals and refill configuration; declining a refresh keeps your
+file, with defaults supplying missing options.
 
 ### Validation
 
-Run `lua tests/maintenance.lua` from the repository root (Lua 5.2+).
+Run these from the repository root (Lua 5.2+ and Node.js):
+
+```sh
+lua tests/maintenance.lua
+lua tests/settings.lua
+lua tests/installer.lua
+lua tests/display.lua
+node tests/config-editor.cjs
+```
+
+Optional browser integration tests require Playwright and its Chromium browser:
+`node tests/browser-editor.cjs`. Set `PLAYWRIGHT_CHANNEL=chrome` to use an installed
+Chrome instead. These cover persistence, target editing, backups, share links,
+atomic imports and mobile layout; screenshots are written to a temporary folder.
+
+Use `settings.layout = "wide"` to retain full-width name columns on tall screens;
+`"fit"`, `"tall"`, `"columns"`, and `"fixed"` continue to work as before.
+
 Tests mock the OC/AE2 boundary; testing on a running GTNH server is still required
 for real crafting behavior and server-load measurements.
+

@@ -1,7 +1,7 @@
 local shell = require("shell")
 local filesystem = require("filesystem")
 local component = require("component")
-local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "Maintainer.lua"}
+local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "src/Settings.lua", "Maintainer.lua"}
 
 local repo = "https://raw.githubusercontent.com/dronf/Level-Maintainer/";
 local api = "https://api.github.com/repos/dronf/Level-Maintainer/commits/";
@@ -52,6 +52,15 @@ local function download(filename)
     return filesystem.exists(temp(filename)) and filesystem.size(temp(filename)) > 0
 end
 
+local function readFile(filePath)
+    local file = io.open(filePath, "r")
+    if not file then return nil end
+    local text = file:read("*a")
+    file:close()
+    return text
+end
+local oldSettings = readFile(path("settings.lua"))
+
 if not filesystem.exists(path("src")) then
     filesystem.makeDirectory(path("src"))
 end
@@ -67,15 +76,18 @@ for _, file in ipairs({"config.lua", "settings.lua"}) do
     end
 end
 
+local downloads = {}
+for _, file in ipairs(wanted) do table.insert(downloads, file) end
+if oldSettings then table.insert(downloads, "settings.lua") end
 local failed = {}
-for _, file in ipairs(wanted) do
+for _, file in ipairs(downloads) do
     if not download(file) then
         table.insert(failed, file)
     end
 end
 
 if #failed > 0 then
-    for _, file in ipairs(wanted) do
+    for _, file in ipairs(downloads) do
         filesystem.remove(temp(file))
     end
     print()
@@ -95,6 +107,60 @@ local function ask(question)
     local answer = io.read()
     return answer ~= nil and answer:lower():sub(1, 1) == "y"
 end
+
+-- Use the newly installed helper even if an earlier installer run cached it.
+package.loaded["src.Settings"] = nil
+if oldSettings then
+    local ok, merged, missing = pcall(function()
+        return require("src.Settings").merge(oldSettings, readFile(temp("settings.lua")))
+    end)
+    local function normalized(text) return text:gsub("\r\n", "\n") end
+    if not ok then
+        print("Could not update settings.lua: " .. tostring(merged) .. ". Your file was kept.")
+    elseif normalized(merged) ~= normalized(oldSettings) then
+        if #missing > 0 then
+            print("New settings available: " .. table.concat(missing, ", "))
+        else
+            print("Updated settings explanations are available.")
+        end
+        if ask("Refresh settings.lua, keeping your values? The old file will be saved as settings.lua.old.") then
+            -- Stage and close the replacement before moving the existing file.
+            local staged = path("settings.lua.merged")
+            local file, err = io.open(staged, "w")
+            local written, closed = nil, nil
+            if file then
+                written, err = file:write(merged)
+                closed = file:close()
+            end
+            if not written or not closed then
+                filesystem.remove(staged)
+                print("Could not write refreshed settings: " .. tostring(err) .. ". Your file was kept.")
+            else
+                filesystem.remove(path("settings.lua.old"))
+                local backedUp, backupErr = filesystem.rename(path("settings.lua"), path("settings.lua.old"))
+                if not backedUp then
+                    filesystem.remove(staged)
+                    print("Could not back up settings.lua: " .. tostring(backupErr) .. ". Your file was kept.")
+                else
+                    local replaced, replaceErr = filesystem.rename(staged, path("settings.lua"))
+                    if replaced then
+                        print("Refreshed settings.lua; your values, including polling intervals, were kept.")
+                    else
+                        local restored = filesystem.rename(path("settings.lua.old"), path("settings.lua"))
+                        filesystem.remove(staged)
+                        print("Could not replace settings.lua: " .. tostring(replaceErr))
+                        if not restored then
+                            print("Restore settings.lua.old before restarting. Not rebooting.")
+                            filesystem.remove(temp("settings.lua"))
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+filesystem.remove(temp("settings.lua"))
 
 -- Auto-start: OpenOS runs every line of /home/.shrc when the shell starts
 local shrc = (os.getenv("HOME") or "/home") .. "/.shrc"
@@ -133,3 +199,4 @@ end
 print("Rebooting...")
 os.sleep(2)
 shell.execute("reboot");
+
