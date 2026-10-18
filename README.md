@@ -139,6 +139,10 @@ backup before clearing site data or changing browsers.
   crafting; with a Target, Low 0 is an actual zero threshold.
 - Choose the item/auto-detected-fluid or fluid section. An optional registry-name
   override supports old fluid drops and ambiguous fluid labels.
+- Set **Refill interval** to positive seconds (for example `2` or `0.5`) to check
+  that entry more frequently while actively refilling. It requires a Target;
+  leave it blank to retain ordinary cycle timing. The value is preserved in
+  imports, saved lists, backups, and share links.
 - Inputs accept `k`, `m`, `g`/`b`, and `t`; the generated file uses **plain Lua
   numbers**, so no new config parser is required in OpenComputers.
 - Import positional or named low/target entries, including multiline entries and
@@ -264,6 +268,39 @@ choose shorter intervals for critical stock. Entries currently crafting or in a
 retry cooldown do not query inventory. CPU availability checks, fairness, cached
 craftables, and error recovery remain in place.
 
+### Faster checks during active refills
+
+Add an optional per-entry `refillInterval`, in real seconds:
+
+```lua
+["Osmium Dust"] = {
+    low = 10000, target = 20000, batch = 1000, refillInterval = 2
+},
+```
+
+Idle stock checks still use `thresholdIntervals` and the normal cycle. After stock
+falls below `low`, this entry checks on its own two-second schedule until it reaches
+`target`, even when `settings.sleep` is longer. Other entries keep their normal
+cycles and stock-check intervals. The timer checks whether the previous craft has
+finished, then submits the next batch if needed; it never queues overlapping jobs
+for the same label. The final request remains capped by the remaining amount to
+target. A busy CPU or crafting calculation can delay submission; a failed request
+keeps its `retryDelay` cooldown. CPU/job snapshots are refreshed on timer wakes,
+but unrelated entries do not query stock or submit jobs on those wakes.
+
+Use a finite positive number; fractional seconds such as `0.5` are supported.
+The option requires `low` and `target`; it is not valid on continuous-production
+entries. Omit it to retain existing behavior. Choose an interval shorter than the
+expected batch duration to reduce the gap between crafts. Very short intervals
+increase CPU/job checks and display updates, so start with one or two seconds.
+Missed slots are skipped: each deadline starts after the preceding check finishes,
+with no burst of catch-up requests. When several timed refills are due together,
+their order rotates so they share available CPUs.
+
+Unchanged entries retain active refill state and deadlines across config reloads.
+Changing `refillInterval` resets that entry's refill state, like changing its target;
+it reactivates on a normal stock check below `low`. Restarting resets refill state.
+
 The installer and installation command use this fork. Settings refreshes preserve
 your polling intervals and refill configuration; declining a refresh keeps your
 file, with defaults supplying missing options.
@@ -274,6 +311,7 @@ Run these from the repository root (Lua 5.2+ and Node.js):
 
 ```sh
 lua tests/maintenance.lua
+lua tests/refill-interval.lua
 lua tests/settings.lua
 lua tests/installer.lua
 lua tests/display.lua

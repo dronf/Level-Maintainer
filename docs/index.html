@@ -89,7 +89,84 @@
   td.num, th.num { text-align: right; font-family: var(--mono); }
   td.fluid { font-family: var(--mono); color: var(--text-dim); }
   tbody tr { cursor: pointer; }
-  tbody tr:hover { background: var(--row…1023 tokens truncated…-name">Name</label>
+  tbody tr:hover { background: var(--row-hover); }
+  tbody tr.editing { background: var(--row-active); }
+  tbody tr.off td.name, tbody tr.off td.num, tbody tr.off td.fluid { color: var(--text-dimmer); text-decoration: line-through; }
+  td.on, th.on { width: 34px; text-align: center; }
+  td.del { width: 40px; text-align: right; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; }
+  .empty { color: var(--text-dimmer); padding: 14px 8px; text-align: center; }
+  .table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  thead th { position: sticky; top: 0; background: var(--bg2); }
+  pre#preview {
+    background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 12px; margin: 10px 0 0;
+    font-family: var(--mono); font-size: 13px; max-height: 340px; overflow: auto; white-space: pre; color: var(--text);
+  }
+  .meta { font-size: 12px; color: var(--text-dim); }
+  .meta.warn { color: var(--warn); }
+  .explain { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--border2); font-size: 13px; color: var(--text-dim); }
+  .explain p { margin: 0 0 4px; }
+  .explain p:last-child { margin-bottom: 0; }
+  .explain b { color: var(--text); font-weight: 500; }
+  kbd { font-family: var(--mono); font-size: 12px; padding: 1px 5px; border: 1px solid var(--border2); border-bottom-width: 2px; border-radius: 4px; background: var(--bg3); color: var(--text); }
+  table.no-fluid .fluid { display: none; }
+  .radio { display: inline-flex; align-items: center; gap: 5px; margin-right: 14px; font-size: 13px; color: var(--text); cursor: pointer; }
+  .banner { border-color: var(--teal); background: var(--row-active); }
+  .banner p { margin: 0 0 8px; }
+  .note { font-size: 12px; color: var(--text-dim); margin: 8px 0 0; }
+  dialog { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; width: min(640px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,0.55); }
+  .theme-toggle { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; }
+  .hidden { display: none !important; }
+  @media (max-width: 700px) {
+    .fields { grid-template-columns: 1fr 1fr; }
+    .fields .name-field { grid-column: 1 / -1; }
+    td.fluid, th.fluid { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Level Maintainer Config List
+      <small>Build <code>config.lua</code> entries (including low/target refill levels) for the <a href="https://github.com/dronf/Level-Maintainer">OpenComputers Level Maintainer</a>. Everything is saved in this browser.</small>
+    </h1>
+    <button class="theme-toggle" id="theme-toggle" title="Switch light / dark" aria-label="Switch light / dark theme">
+      <svg id="theme-icon" width="15" height="15" viewBox="0 0 13 13" fill="none"></svg>
+    </button>
+  </header>
+
+  <section id="share-banner" class="banner hidden" aria-live="polite">
+    <p id="share-text"></p>
+    <div class="buttons">
+      <button class="primary" id="share-add">Add as a new list</button>
+      <button id="share-ignore">Ignore</button>
+    </div>
+  </section>
+
+  <section id="storage-warning" class="banner hidden">
+    <p>This browser doesn't allow saving here (private window or blocked site data), so your lists are lost when you close the page. Use <b>Export backup</b> to keep them.</p>
+  </section>
+
+  <section>
+    <h2>List</h2>
+    <div class="row">
+      <div class="grow">
+        <label for="list-select">Current list</label>
+        <select id="list-select"></select>
+      </div>
+      <button id="list-new">New list</button>
+      <button id="list-rename">Rename</button>
+      <button id="list-delete" class="danger">Delete list</button>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="form-title">Add an entry</h2>
+    <form id="entry-form" autocomplete="off">
+      <div class="fields">
+        <div class="name-field">
+          <label for="f-name">Name</label>
           <input type="text" id="f-name" spellcheck="false" placeholder="Ctrl+C in NEI, then Ctrl+V here">
           <div class="hint" id="h-name"></div>
         </div>
@@ -108,6 +185,9 @@
         <div class="grow"><label for="f-target">Refill target (optional)</label>
           <input type="text" id="f-target" placeholder="Blank = simple threshold">
           <div class="hint" id="h-target"></div></div>
+        <div class="grow"><label for="f-interval">Refill interval (seconds, optional)</label>
+          <input type="text" id="f-interval" placeholder="Blank = normal cycles, e.g. 2">
+          <div class="hint">Only active refills; requires a Target.</div></div>
         <div class="grow"><label for="f-block">Entry type</label>
           <select id="f-block"><option value="items">Item / auto-detected fluid</option><option value="fluids">Fluid</option></select></div>
         <div class="grow"><label for="f-fluid">Fluid registry override (optional)</label>
@@ -125,6 +205,7 @@
       <p><b>Name</b>: the item or fluid exactly as the game shows it. Hover it in NEI and press <kbd>Ctrl+C</kbd> to copy its name, then paste it here with <kbd>Ctrl+V</kbd>. Quotes are optional.</p>
       <p><b>Maintain</b>: keep at least this many in the ME system (fluids in mB). Leave it empty or 0 to always keep one batch crafting.</p>
       <p><b>Refill target</b>: optional upper stock level. Starts below Low, then refills to Target; Batch caps each request. Low 0 is a real zero threshold in this mode.</p>
+      <p><b>Refill interval</b>: optional seconds between active-refill checks (for example 2 or 0.5). Idle checks stay adaptive; other entries keep their schedules. Busy crafts are skipped and failures keep their cooldown.</p>
       <p><b>Batch Amount</b>: how many to request at once.</p>
       <p>Amounts can end in <code>k</code> (thousand), <code>m</code> (million), <code>g</code> or <code>b</code> (billion) and <code>t</code> (trillion): <code>250k</code> = 250,000, <code>1.5m</code> = 1,500,000. Exports always use plain Lua numbers. Separators work too: <code>1,024</code>.</p>
     </div>
@@ -139,7 +220,7 @@
             <th class="on" title="Untick to disable: the entry stays here but is written commented out with --">On</th>
             <th>Name</th>
             <th class="num">Maintain</th>
-            <th class="num">Target</th><th>Type</th><th class="num">Batch</th>
+            <th class="num">Target</th><th class="num">Refill seconds</th><th>Type</th><th class="num">Batch</th>
             <th class="fluid">Drop fluid</th>
             <th></th>
           </tr>
@@ -242,6 +323,7 @@ function uniqueListName(name) {
 // ─── Page ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const nameBox = $('f-name'), maintainBox = $('f-maintain'), batchBox = $('f-batch');
+const intervalBox = $('f-interval');
 const targetBox = $('f-target'), blockBox = $('f-block'), fluidBox = $('f-fluid');
 
 function setStatus(text, isError) {
@@ -292,14 +374,14 @@ function renderEntries() {
     delButton.setAttribute('aria-label', `Delete ${e.name}`);
     del.append(delButton);
     tr.append(on, cell(e.name, 'name'), cell(e.threshold === 0 && e.target == null ? 'nil' : formatAmount(e.threshold), 'num'),
-      cell(e.target == null ? '-' : formatAmount(e.target), 'num'), cell(e.block, ''),
+      cell(e.target == null ? '-' : formatAmount(e.target), 'num'), cell(e.refillInterval ?? '-', 'num'), cell(e.block, ''),
       cell(formatAmount(e.count), 'num'), cell(e.fluid, 'fluid'), del);
     return tr;
   });
   if (rows.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 8;
+    td.colSpan = 9;
     td.className = 'empty';
     td.textContent = 'No entries yet. Add one above, or use Import lines.';
     tr.append(td);
@@ -356,7 +438,7 @@ function updateHints() {
 }
 
 function clearForm() {
-  nameBox.value = maintainBox.value = batchBox.value = targetBox.value = fluidBox.value = '';
+  nameBox.value = maintainBox.value = batchBox.value = targetBox.value = fluidBox.value = intervalBox.value = '';
   blockBox.value = 'items';
   updateHints();
   nameBox.focus();
@@ -375,6 +457,7 @@ function editEntry(index) {
   maintainBox.value = formatAmount(e.threshold);
   batchBox.value = formatAmount(e.count);
   targetBox.value = e.target == null ? '' : formatAmount(e.target);
+  intervalBox.value = e.refillInterval ?? '';
   blockBox.value = e.block;
   fluidBox.value = e.fluid;
   updateHints();
@@ -422,7 +505,7 @@ $('entry-form').addEventListener('submit', ev => {
   ev.preventDefault();
   try {
     const list = currentList();
-    const entry = makeEntry(nameBox.value, maintainBox.value, batchBox.value, editedFluid(), targetBox.value, blockBox.value);
+    const entry = makeEntry(nameBox.value, maintainBox.value, batchBox.value, editedFluid(), targetBox.value, blockBox.value, false, intervalBox.value);
     const existing = list.entries.findIndex(e => e.name === entry.name && e.block === entry.block);
     let message;
     if (editIndex >= 0) {
@@ -448,7 +531,7 @@ $('entry-form').addEventListener('submit', ev => {
   }
 });
 
-for (const box of [nameBox, maintainBox, batchBox, targetBox, blockBox, fluidBox]) box.addEventListener('input', updateHints);
+for (const box of [nameBox, maintainBox, batchBox, targetBox, blockBox, fluidBox, intervalBox]) box.addEventListener('input', updateHints);
 $('new-btn').addEventListener('click', () => { startNewEntry(); setStatus(''); });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && !$('import-dialog').open && document.activeElement?.closest('#entry-form')) {
@@ -459,7 +542,7 @@ document.addEventListener('keydown', ev => {
 
 $('copy-line-btn').addEventListener('click', async () => {
   try {
-    const line = formatEntry(makeEntry(nameBox.value, maintainBox.value, batchBox.value, editedFluid(), targetBox.value, blockBox.value));
+    const line = formatEntry(makeEntry(nameBox.value, maintainBox.value, batchBox.value, editedFluid(), targetBox.value, blockBox.value, false, intervalBox.value));
     if (await copyText(line)) setStatus('Copied: ' + line.trim());
     else setStatus('Could not copy; select the line in the preview and copy it by hand.', true);
   } catch (e) {
@@ -589,7 +672,7 @@ $('import-ok').addEventListener('click', () => {
 // ─── Backup file ─────────────────────────────────────────────────────────
 // Entries use the PowerShell tool's field names, so its configs.json and these files match
 function exportEntries(entries) {
-  return entries.map(e => ({ Name: e.name, Threshold: e.threshold, Target: e.target, Count: e.count, Fluid: e.fluid, Block: e.block, Enabled: e.enabled !== false }));
+  return entries.map(e => ({ Name: e.name, Threshold: e.threshold, Target: e.target, RefillInterval: e.refillInterval, Count: e.count, Fluid: e.fluid, Block: e.block, Enabled: e.enabled !== false }));
 }
 
 $('export').addEventListener('click', () => {
@@ -646,7 +729,7 @@ $('share').addEventListener('click', async () => {
     return;
   }
   const list = currentList();
-  const payload = { n: list.name, e: list.entries.map(e => [e.name, e.threshold, e.count, e.fluid, e.enabled === false ? 0 : 1, e.target, e.block]) };
+  const payload = { n: list.name, e: list.entries.map(e => [e.name, e.threshold, e.count, e.fluid, e.enabled === false ? 0 : 1, e.target, e.block, e.refillInterval]) };
   const link = location.origin + location.pathname + '#share=' + toBase64Url(JSON.stringify(payload));
   if (await copyText(link)) setStatus(`Copied a share link for "${list.name}" (${list.entries.length} entries, ${link.length} characters).`);
   else setStatus('Could not copy the link.', true);
@@ -664,7 +747,7 @@ function readShareLink() {
   try {
     const payload = JSON.parse(fromBase64Url(match[1]));
     const entries = cleanEntries((payload.e || []).map(a => Array.isArray(a)
-      ? { name: a[0], threshold: a[1], count: a[2], fluid: a[3] || '', enabled: a[4] !== 0, target: a[5], block: a[6] } : null));
+      ? { name: a[0], threshold: a[1], count: a[2], fluid: a[3] || '', enabled: a[4] !== 0, target: a[5], block: a[6], refillInterval: a[7] } : null));
     sharedList = { name: String(payload.n || 'Shared list'), entries };
     $('share-text').textContent = `This link contains the list "${sharedList.name}" with ${entries.length} entries.`;
     $('share-banner').classList.remove('hidden');

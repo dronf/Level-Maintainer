@@ -23,7 +23,7 @@ function formatAmount(n) {
 }
 function withSeparators(n) { return n.toLocaleString('en-US'); }
 function stripQuotes(text) { return String(text).trim().replace(/^["“”„]+|["“”„]+$/g, '').trim(); }
-function makeEntry(name, maintain, batch, fluid = '', target = '', block = 'items', literalName = false) {
+function makeEntry(name, maintain, batch, fluid = '', target = '', block = 'items', literalName = false, refillInterval = '') {
   const clean = literalName ? String(name) : stripQuotes(name);
   if (!clean || /[\x00-\x1f\x7f]/.test(clean)) throw new Error('Enter a name without control characters.');
   const threshold = String(maintain).trim() === '' ? 0 : parseAmount(maintain);
@@ -32,10 +32,16 @@ function makeEntry(name, maintain, batch, fluid = '', target = '', block = 'item
   if (threshold === null) throw new Error('Maintain / Low must be a nonnegative whole number.');
   if (count === null || count === 0) throw new Error('Batch must be a whole number above 0.');
   if (String(target).trim() !== '' && (upper === null || upper < threshold)) throw new Error('Target must be a whole number at least Low.');
+  const seconds = String(refillInterval).trim();
+  const interval = seconds === '' ? null : Number(seconds);
+  if (seconds !== '' && (!/^\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(seconds) || !Number.isFinite(interval)
+    || interval <= 0 || interval > Number.MAX_SAFE_INTEGER || upper === null)) {
+    throw new Error('Refill interval must be positive seconds (for example 2 or 0.5), with a Target set.');
+  }
   if (!['items', 'fluids'].includes(block)) throw new Error('Entry type must be items or fluids.');
   const registry = String(fluid).trim();
   if (/[\x00-\x1f\x7f]/.test(registry)) throw new Error('Fluid registry name contains a control character.');
-  return {name: clean, threshold, count, target: upper, fluid: registry, block, enabled: true};
+  return {name: clean, threshold, count, target: upper, refillInterval: interval, fluid: registry, block, enabled: true};
 }
 function luaString(s) { return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
 function formatEntry(e) {
@@ -43,7 +49,7 @@ function formatEntry(e) {
   const extra = e.fluid ? ', ' + (e.target == null ? '' : 'fluidName = ') + luaString(e.fluid) : '';
   const values = e.target == null
     ? `${e.threshold === 0 ? 'nil' : e.threshold}, ${e.count}${extra}`
-    : `low = ${e.threshold}, target = ${e.target}, batch = ${e.count}${extra}`;
+    : `low = ${e.threshold}, target = ${e.target}, batch = ${e.count}${extra}${e.refillInterval == null ? '' : ', refillInterval = ' + e.refillInterval}`;
   return `${e.enabled === false ? '--' : ''}    [${luaString(e.name)}] = {${values}},`;
 }
 function formatLines(entries) { return entries.map(formatEntry).join('\n'); }
@@ -60,7 +66,8 @@ function formatConfigFile(entries) {
 function cleanEntry(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('Invalid backup entry.');
   const e = makeEntry(raw.name ?? raw.Name ?? '', raw.threshold ?? raw.Threshold ?? 0,
-    raw.count ?? raw.Count ?? '', raw.fluid ?? raw.Fluid ?? '', raw.target ?? raw.Target ?? '', raw.block ?? raw.Block ?? 'items', true);
+    raw.count ?? raw.Count ?? '', raw.fluid ?? raw.Fluid ?? '', raw.target ?? raw.Target ?? '', raw.block ?? raw.Block ?? 'items', true,
+    raw.refillInterval ?? raw.RefillInterval ?? '');
   e.enabled = (raw.enabled ?? raw.Enabled) !== false;
   return e;
 }
@@ -80,7 +87,7 @@ function decodeLuaString(token) {
 }
 function parseFields(body) {
   const fields = [];
-  const token = /\s*(?:(\w+)\s*=\s*)?("(?:[^"\\]|\\.)*"|nil|\d+(?:\.\d+)?[kmgbt]?)(\s*[,;]\s*|\s*$)/igy;
+  const token = /\s*(?:(\w+)\s*=\s*)?("(?:[^"\\]|\\.)*"|nil|\d+(?:\.\d+)?(?:e[+-]?\d+)?[kmgbt]?)(\s*[,;]\s*|\s*$)/igy;
   let position = 0;
   while (position < body.length && body.slice(position).trim()) {
     token.lastIndex = position;
@@ -92,7 +99,7 @@ function parseFields(body) {
   const named = fields.some(f => f.key);
   if (named && fields.some(f => !f.key)) throw new Error('Mixed positional and named entries are not supported.');
   const values = {};
-  const keys = named ? ['low', 'target', 'batch', 'fluidName'] : ['low', 'batch', 'fluidName'];
+  const keys = named ? ['low', 'target', 'batch', 'fluidName', 'refillInterval'] : ['low', 'batch', 'fluidName'];
   fields.forEach((f, i) => {
     const key = named ? f.key : keys[i];
     if (!keys.includes(key) || Object.hasOwn(values, key)) throw new Error('Unknown or duplicate entry field.');
@@ -103,7 +110,8 @@ function parseFields(body) {
   const low = values.low === 'nil' || values.low == null ? '' : values.low;
   const target = values.target ?? '';
   if (named && values.low === 'nil') throw new Error('Low must be a number when Target is set.');
-  return {low, target, batch: values.batch, fluid: values.fluidName ? decodeLuaString(values.fluidName) : ''};
+  return {low, target, batch: values.batch, fluid: values.fluidName ? decodeLuaString(values.fluidName) : '',
+    refillInterval: values.refillInterval ?? ''};
 }
 function importText(text) {
   // Deliberately parse a small, documented Lua subset; never evaluate pasted code.
@@ -138,7 +146,7 @@ function importText(text) {
     if (!m) continue;
     try {
       const f = parseFields(m[2]);
-      const entry = makeEntry(decodeLuaString(m[1]), f.low, f.batch, f.fluid, f.target, block, true);
+      const entry = makeEntry(decodeLuaString(m[1]), f.low, f.batch, f.fluid, f.target, block, true, f.refillInterval);
       entry.enabled = !pendingDisabled;
       entries.push(entry);
     } catch (err) { throw new Error(`Line ${pendingLine}: ${err.message} Nothing imported.`); }
