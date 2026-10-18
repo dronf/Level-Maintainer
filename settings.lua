@@ -2,8 +2,8 @@ local settings = {}
 
 -- Maintainer behaviour. The list of maintained items lives in config.lua.
 -- While the maintainer runs, press E to edit config.lua or S to edit this file.
--- Changes take effect the next time Maintainer starts (no reboot needed), or
--- while it runs if live reload (reloadCheck, at the bottom) is on.
+-- E/S edits reload when the editor closes. R reloads externally saved files;
+-- reloadCheck can pick them up automatically. Files are also read on each start.
 
 -- Seconds to wait between cycles. Each cycle visits every entry; stocked entries query only when due.
 settings.sleep = 10
@@ -80,7 +80,7 @@ settings.cpuDisplay = "free"
 -- Live reload: how often, in seconds, to check whether config.lua or settings.lua
 -- was saved while the maintainer runs, and reload them. Only useful if you can
 -- edit the files outside the game (singleplayer, or a server on your own PC),
--- since the maintainer has to be stopped to use edit in game. e.g. 30.
+-- E/S already reload when the in-game editor closes. e.g. 30.
 -- 0 = off. The files are read fresh every time the maintainer starts either way.
 settings.reloadCheck = 0
 

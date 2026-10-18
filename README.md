@@ -1,7 +1,7 @@
 # Infinite Maintainer
 
-Lets you passive lines easily, without lag and randomness of AE2 maintainer.
-Also supports having a threshold.
+Automates AE2 crafting requests through OpenComputers: continuous production,
+stock thresholds, or low/target refill levels, with adaptive inventory polling.
 
 Fork of [Echoloquate/Level-Maintainer](https://github.com/Echoloquate/Level-Maintainer) with fixes for the lookup cache, NBT item and fluid thresholds and crash recovery, a `settings.lua` for timing, retry and CPU options, and optional auto-start.
 
@@ -26,7 +26,19 @@ The maintainer runs on OpenOS, so install it to the hard drive first:
 
 # Installation
 
-Download it (run the same command again later to update)
+For a publicly accessible repository, download it with the command below (run
+it again later to update). **This fork is currently private:** OpenComputers'
+unauthenticated `wget` cannot download its private GitHub files.
+
+For a private installation, download these files from an authenticated GitHub
+session on your PC and transfer them to the OpenComputers drive, preserving the
+`src/` folder: `Maintainer.lua`, `config.lua`, `settings.lua`, `src/AE2.lua`,
+`src/Display.lua`, `src/Utility.lua`, and `src/Settings.lua`. Run `Maintainer`
+directly; the installer also downloads from GitHub, so copying only
+`installer.lua` does not solve private-repository access. Keep your existing
+`config.lua` and `settings.lua` when updating manually.
+
+The browser editor's `docs/` files stay on your PC, not the OC drive.
 
 ```bash
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua && installer
@@ -42,7 +54,9 @@ It then asks:
 - **Start Maintainer automatically when the computer boots?** Adds a line to `/home/.shrc`.
 - **Turn the computer on when it receives a redstone signal?** Only asked when a redstone card is installed.
 
-Then it reboots.
+After a successful installation it reboots. Failed downloads leave the existing
+installation untouched and do not reboot. If a settings replacement cannot be
+rolled back, the installer stops and asks you to restore `settings.lua.old`.
 
 Run it from the folder you installed to (not needed if auto-start is on)
 
@@ -67,11 +81,11 @@ Phthalic Acid                11.97M   10.00M   3.00M  stocked
 E edit config  S edit settings  R reload  Q quit
 ```
 
-- **Stock** is shown for entries with a threshold (the maintainer only reads the stock when it has to compare it). Fluids are in mB. The stock isn't read while an entry is crafting, waiting to retry or waiting for a CPU; its last value is then shown in gray.
+- **Stock** is shown for entries with a threshold (the maintainer only reads the stock when it has to compare it). Fluids are in mB. The stock isn't read while an entry is crafting, waiting to retry or waiting for a CPU; its last value is then shown in gray. Stocked entries also reuse their last reading until their next adaptive stock check.
 - **Status** is one of: `stocked`, `crafting`, `requested`, `waiting for CPU`, `failed` (the Recent log says when it is retried), `not craftable`, `error`, or `waiting` before the entry's first check.
 - Rows that need attention (`failed`, `error`, `not craftable`) are listed first; the rest are alphabetical.
 - The header counts down to the next cycle.
-- By default (`settings.layout = "fit"`) the maintainer picks the screen resolution itself, so the table fills the screen with text as large as possible; with few entries the text is big, with many it gets smaller. `"columns"` instead keeps the resolution and splits the rows into side-by-side tables on wide screens. On a screen that is taller than wide (e.g. 2x3 blocks) `"fit"` uses narrower columns and short status words, so the text can be larger; `"tall"` uses them on any screen.
+- By default (`settings.layout = "fit"`) the maintainer picks the screen resolution itself, so the table fills the screen with text as large as possible; with few entries the text is big, with many it gets smaller. `"columns"` instead keeps the resolution and splits the rows into side-by-side tables on wide screens. On a screen that is taller than wide (e.g. 2x3 blocks) `"fit"` uses narrower columns and short status words, so the text can be larger; `"tall"` uses them on any screen. `"wide"` keeps the full-width columns on tall screens, allowing more of a long name to fit at a smaller text size.
 - With a color GPU the rows are colored by status. If there are more entries than fit, the table has pages: the header shows `Page 1/3`, and Page Up/Down or the Up/Down arrows switch pages. `settings.showRecent = false` gives the table the whole screen.
 
 Set `settings.display = "log"` for the plain scrolling log instead.
@@ -99,11 +113,12 @@ While running, the maintainer recovers from problems by itself:
 - A broken entry in `config.lua` (for example a missing batch size) is reported and skipped; the other entries keep running.
 - At startup, a mistake that stops `config.lua` from loading at all is reported and the maintainer waits for the file to be fixed instead of exiting. With live reload on, a mistake in a reloaded file is reported and the last working version stays in use.
 
-It only stops when you press Ctrl+Alt+C.
+Press Q between cycles, or Ctrl+Alt+C, to stop it. Stopping the maintainer does
+not cancel crafting jobs already submitted to AE2.
 
 ## Start on boot
 
-Answer yes to the first installer question, or add this line to `/home/.shrc` yourself (use the folder you installed to):
+Answer yes to the installer's auto-start question, or add this line to `/home/.shrc` yourself (use the folder you installed to):
 
 ```bash
 cd "/home" && Maintainer
@@ -129,7 +144,8 @@ The [Config List editor](docs/index.html) builds `config.lua` without editing Lu
 by hand. Download the repository and open `docs/index.html` in a browser, keeping
 `docs/config.js` beside it. No Minecraft mod or server installation is needed for
 the editor. It works offline and stores named lists in that browser; export a
-backup before clearing site data or changing browsers.
+backup before clearing site data or changing browsers. The repository link opens the
+source on GitHub; download the repository and extract it to run the page locally.
 
 - Enter **Name**, **Maintain / Low**, and **Batch Amount**. Hover an item or fluid
   in NEI and press Ctrl+C to copy its label.
@@ -140,10 +156,16 @@ backup before clearing site data or changing browsers.
 - Choose the item/auto-detected-fluid or fluid section. An optional registry-name
   override supports old fluid drops and ambiguous fluid labels.
 - Inputs accept `k`, `m`, `g`/`b`, and `t`; the generated file uses **plain Lua
-  numbers**, so no new config parser is required in OpenComputers.
+  numbers**, so no new config parser is required in OpenComputers. When editing `config.lua`
+  or `settings.lua` directly, use plain numbers such as `10000`, **not** `10k`.
 - Import positional or named low/target entries, including multiline entries and
   disabled lines. Unsupported expressions or entries stop the entire import
   with an error. The editor does not execute imported Lua.
+- **Whole config.lua** includes `local cfg = {}` and `return cfg`; use it to
+  replace the entire file. **Sections only** contains the `cfg.items` and
+  `cfg.fluids` assignments; replace those sections in an existing file while
+  keeping its initialization and return statement. **Copy line** goes inside
+  the appropriate item/fluid section.
 - Download the full file, copy it, or use **Copy next part** for OpenComputers'
   1,024-character paste limit. Press E in the maintainer, replace the existing
   file contents, paste the parts in order, save with Ctrl+S and close with Ctrl+W.
@@ -189,7 +211,8 @@ Timing and behaviour live in `settings.lua` (anything missing falls back to a de
 
 | Setting | Default | What it does |
 |---|---|---|
-| `sleep` | `10` | Seconds between cycles. |
+| `sleep` | `10` | Seconds between cycles; stocked entries only query inventory when due. |
+| `thresholdIntervals` | `{15, 30, 60, 120, 300}` | Seconds between stock checks for stock/low ratios below 1.25, 2, 5, 10, and otherwise. `0` checks each cycle. Sudden consumption can delay replenishment by this interval plus one cycle. See [Adaptive polling and refill targets](#adaptive-polling-and-refill-targets). |
 | `retryDelay` | `60` | Seconds to wait before recalculating an entry whose request failed (missing ingredients, no suitable CPU). `0` retries every cycle. |
 | `requireFreeCpu` | `true` | Only start a calculation when a crafting CPU (or `cpuName`) is idle. |
 | `cpuName` | `nil` | Send every request to this named crafting CPU. `nil` lets AE2 pick. |
@@ -199,12 +222,15 @@ Timing and behaviour live in `settings.lua` (anything missing falls back to a de
 | `display` | `"table"` | `"table"` shows the status table described under [Screen and keys](#screen-and-keys); `"log"` shows a scrolling log. |
 | `showRecent` | `true` | Show the recent log lines below the status table. `false` gives the whole screen to the table. |
 | `cpuDisplay` | `"free"` | How the header counts crafting CPUs: `"free"` shows idle CPUs (`CPUs free: 9/11`), `"busy"` shows CPUs running a job (`CPUs busy: 2/11`). |
-| `layout` | `"fit"` | How the status table uses the screen. `"fit"` changes the screen resolution so the rows fill the screen with the largest text that fits (matched to the screen's shape; the old resolution comes back when the maintainer stops). On a screen taller than wide it uses the narrow columns of `"tall"`. `"columns"` keeps the resolution and puts the rows in side-by-side tables when the screen is wide enough. `"fixed"` keeps the resolution with one table. `"tall"` is `"fit"` that always uses narrow columns and short status words (`no CPU`, `no pattern`); long names are cut to fit. |
+| `layout` | `"fit"` | How the status table uses the screen. `"fit"` changes the screen resolution so the rows fill the screen with the largest text that fits (matched to the screen's shape; the old resolution comes back when the maintainer stops). On a screen taller than wide it uses the narrow columns of `"tall"`. `"columns"` keeps the resolution and puts the rows in side-by-side tables when the screen is wide enough. `"wide"` fits the resolution but keeps full-width columns on tall screens. `"fixed"` keeps the resolution with one table. `"tall"` is `"fit"` that always uses narrow columns and short status words (`no CPU`, `no pattern`); long names are cut to fit. |
 | `logRepeats` | `false` | Show everything that happens, every cycle, in the Recent panel of the status table. `false` logs each entry's status once and again only when it changes. The scrolling log (`display = "log"`) always logs each status once. |
 | `reloadCheck` | `0` | Live reload: seconds between checks for a saved `config.lua` or `settings.lua` while running, e.g. `30`. Only useful if you can edit the files outside the game. `0` = off. |
 | `utcOffset` | `0` | Hours added to UTC for log timestamps (e.g. `1` for CET, `2` for CEST). Timestamps use the server's real clock, not in-game time. |
 
-**!! Threshold has a performance impact -- only add it when necessary, and preferably not on mainnet !!**
+Thresholds require targeted inventory queries. Adaptive polling reduces those
+queries for stocked entries; use shorter intervals for critical supplies and
+larger batches to reduce crafting calculations. Actual server cost depends on
+your network and workload.
 
 ## Changing the config while it runs
 
