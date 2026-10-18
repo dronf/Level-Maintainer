@@ -123,8 +123,8 @@
     <div id="status" role="status" aria-live="polite"></div>
     <div class="explain">
       <p><b>Name</b>: the item or fluid exactly as the game shows it. Hover it in NEI and press <kbd>Ctrl+C</kbd> to copy its name, then paste it here with <kbd>Ctrl+V</kbd>. Quotes are optional.</p>
-      <p><b>Maintain</b>: keep at least this many in the ME system (fluids in mB). Leave it empty or 0 to always keep one batch crafting.</p>
-      <p><b>Refill target</b>: optional upper stock level. Starts below Low, then refills to Target; Batch caps each request. Low 0 is a real zero threshold in this mode.</p>
+      <p><b>Maintain / Low</b>: request a batch when observed stock falls below this level (fluids in mB). With no Target, empty or 0 keeps one batch crafting continuously. Adaptive polling means refills may not start immediately after a withdrawal.</p>
+      <p><b>Refill target</b>: optional upper stock level. Starts below Low, then refills to Target; Batch caps each request. Low 0 is a real zero threshold in this mode, so nonnegative stock never starts a new refill.</p>
       <p><b>Batch Amount</b>: how many to request at once.</p>
       <p>Amounts can end in <code>k</code> (thousand), <code>m</code> (million), <code>g</code> or <code>b</code> (billion) and <code>t</code> (trillion): <code>250k</code> = 250,000, <code>1.5m</code> = 1,500,000. Exports always use plain Lua numbers. Separators work too: <code>1,024</code>.</p>
     </div>
@@ -138,9 +138,9 @@
           <tr>
             <th class="on" title="Untick to disable: the entry stays here but is written commented out with --">On</th>
             <th>Name</th>
-            <th class="num">Maintain</th>
+            <th class="num">Maintain / Low</th>
             <th class="num">Target</th><th>Type</th><th class="num">Batch</th>
-            <th class="fluid">Drop fluid</th>
+            <th class="fluid">Registry override</th>
             <th></th>
           </tr>
         </thead>
@@ -165,6 +165,7 @@
       <button id="copy-part">Copy next part</button>
       <button id="download">Download config.lua</button>
     </div>
+    <p class="note"><b>Whole config.lua</b> replaces the entire file. <b>Sections only</b> replaces its item/fluid sections while keeping <code>local cfg = {}</code> and <code>return cfg</code>. <b>Copy line</b> belongs inside the chosen section.</p>
     <p class="note">OpenComputers cuts a paste off after 1024 characters. If the output is longer, use <b>Copy next part</b> and paste the parts one after another. In the maintainer, press E to open <code>config.lua</code>, paste, then Ctrl+S to save and Ctrl+W to close.</p>
   </section>
 
@@ -176,13 +177,13 @@
       <button id="share">Copy share link</button>
       <input type="file" id="file-input" accept=".json,application/json" class="hidden">
     </div>
-    <p class="note"><b>Export backup</b> saves all lists to a file. <b>Import</b> adds the lists from such a file, or a <code>configs.json</code> from the old PowerShell ConfigList as a new list. <b>Copy share link</b> puts the current list in a link; opening it in another browser offers to add it there.</p>
+    <p class="note"><b>Export backup</b> saves all lists to a file. <b>Import</b> adds the lists from such a file, or a <code>configs.json</code> from the old PowerShell ConfigList as a new list. <b>Copy share link</b> puts the current list in a link; opening it in another browser offers to add it there. Share links need an HTTP(S)-hosted editor; for local files use backups.</p>
   </section>
 </main>
 
 <dialog id="import-dialog">
   <h2>Import config lines</h2>
-  <p class="note" style="margin-top: 0;">Paste lines from <code>config.lua</code> (or the whole file). Lines like <code>["Name"] = {512, 1024},</code> are imported into the current list, commented-out ones as disabled; Simple threshold and named low/target entries are supported. Unsupported entries stop the import without changing your list. Entries with the same name are updated.</p>
+  <p class="note" style="margin-top: 0;">Paste lines from <code>config.lua</code> (or the whole file). Lines like <code>["Name"] = {512, 1024},</code> are imported into the current list, commented-out ones as disabled. Simple threshold and named low/target entries are supported. Unsupported entries stop the import without changing your list. Entries with the same name and type are updated.</p>
   <textarea id="import-text" rows="14" spellcheck="false"></textarea>
   <div class="buttons">
     <button class="primary" id="import-ok">Import</button>
@@ -306,7 +307,7 @@ function renderEntries() {
     rows.push(tr);
   }
   body.replaceChildren(...rows);
-  // The drop fluid column only shows when an entry has one (imported ae2fc drop lines)
+  // Show registry overrides only when at least one entry uses one.
   $('entries-table').classList.toggle('no-fluid', !list.entries.some(e => e.fluid));
   const off = list.entries.filter(e => e.enabled === false).length;
   $('entries-title').textContent = `Entries in "${list.name}"`;
@@ -628,7 +629,7 @@ $('file-input').addEventListener('change', async ev => {
 });
 
 // ─── Share link ──────────────────────────────────────────────────────────
-// The list goes in the link after #share= as base64url JSON: {n: name, e: [[name, threshold, count, fluid, on]]}
+// The fragment stores base64url JSON: {n: name, e: [[name, threshold, count, fluid, on, target, block]]}
 function toBase64Url(text) {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
