@@ -194,6 +194,7 @@ Timing and behaviour live in `settings.lua` (anything missing falls back to a de
 | Setting | Default | What it does |
 |---|---|---|
 | `sleep` | `10` | Seconds between cycles. |
+| `headerInterval` | `5` | Seconds between table clock/countdown updates; cosmetic only. `1` restores smoother updates. Crafting and refill deadlines are unchanged. |
 | `retryDelay` | `60` | Seconds to wait before recalculating an entry whose request failed (missing ingredients, no suitable CPU). `0` retries every cycle. |
 | `requireFreeCpu` | `true` | Only start a calculation when a crafting CPU (or `cpuName`) is idle. |
 | `cpuName` | `nil` | Send every request to this named crafting CPU. `nil` lets AE2 pick. |
@@ -209,6 +210,30 @@ Timing and behaviour live in `settings.lua` (anything missing falls back to a de
 | `utcOffset` | `0` | Hours added to UTC for log timestamps (e.g. `1` for CET, `2` for CEST). Timestamps use the server's real clock, not in-game time. |
 
 **!! Threshold has a performance impact -- only add it when necessary, and preferably not on mainnet !!**
+
+## Lower display and timestamp overhead
+
+The real clock is sampled from the filesystem once per minute, then advanced
+using `computer.uptime()`. Log lines and countdown updates reuse that anchor
+instead of opening a file for every timestamp. A failed resync keeps the previous
+anchor and backs off; real-clock adjustments are picked up at the next resync.
+
+GPU resolution and depth are sampled once per guarded drawing operation and color
+changes are skipped when redundant within that draw. The cache is discarded after
+each operation, including failures, so later resizes and screen ownership changes
+are observed. A 23-row fixed-layout test reduces metadata queries from 8 to 2;
+text writes and fills remain the same. Screen characters/colors match the previous
+renderer across 20 combinations of layouts, color depth and paging.
+
+`settings.headerInterval = 5` reduces cosmetic table updates from once a second to
+once every five seconds. Use `1` for the old cadence, or a longer interval for less
+display work. This does not poll CPUs, change stock checks, or postpone scheduled
+refill wakes. The CPU polling rollback remains in place. These are component-call
+reductions, not a measured reduction in server MSPT.
+
+To reproduce the optional renderer comparison, obtain the pre-change
+`src/Display.lua` from commit `52208f2` and run
+`lua tests/display-equivalence.lua /path/to/old-Display.lua`.
 
 ## Changing the config while it runs
 
@@ -317,6 +342,7 @@ lua tests/installer.lua
 lua tests/nei-bridge.lua
 lua tests/nei-manager.lua
 lua tests/display.lua
+lua tests/utility.lua
 node tests/config-editor.cjs
 ```
 

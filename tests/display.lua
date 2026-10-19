@@ -1,13 +1,14 @@
 local width, height = 80, 25
 local drawn = {}
+local queries = {resolution = 0, depth = 0}
 local gpu = {
     maxResolution = function() return 160, 50 end,
-    getResolution = function() return width, height end,
+    getResolution = function() queries.resolution = queries.resolution + 1; return width, height end,
     setResolution = function(w, h) width, height = w, h end,
     getScreen = function() return "screen" end,
     set = function(x, y, text) drawn[#drawn + 1] = text end,
     fill = function() end,
-    getDepth = function() return 8 end,
+    getDepth = function() queries.depth = queries.depth + 1; return 8 end,
     setForeground = function() end,
     setBackground = function() end,
 }
@@ -24,8 +25,10 @@ local name = "Very Long Naquadah Chemical Name"
 local row = {name = name, stock = "100", want = "200", batch = "50",
     status = "waiting for CPU", shortStatus = "no CPU", color = "orange"}
 drawn = {}
+queries.resolution, queries.depth = 0, 0
 display.update({row}, "Test", "Keys")
 assert(display.isActive(), display.failure())
+assert(queries.resolution == 1 and queries.depth == 1, "GPU metadata must be read once per draw")
 local fitWidth = width
 display.setLayout("wide")
 assert(display.isActive(), display.failure())

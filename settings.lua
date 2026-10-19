@@ -8,6 +8,10 @@ local settings = {}
 -- Seconds to wait between cycles. Each cycle visits every entry; stocked entries query only when due.
 settings.sleep = 10
 
+-- Seconds between table header/countdown updates. Cosmetic only: does not
+-- change crafting, stock checks or refill deadlines. 1 = smoother, 5 = cheaper.
+settings.headerInterval = 5
+
 -- Stock/low ratios <1.25, <2, <5, <10, and otherwise.
 -- Seconds between targeted stock checks; 0 = check each cycle.
 -- Sudden consumption can delay replenishment by this interval plus one cycle.
