@@ -67,22 +67,12 @@ Phthalic Acid                11.97M   10.00M   3.00M  stocked
 E edit config  S edit settings  R reload  Q quit
 ```
 
-- **Stock** is shown for entries with a threshold (the maintainer only reads the stock when it has to compare it). Fluids are in mB. The stock isn't read while an entry is crafting or waiting to retry; its last value is then shown in gray. Due stock checks still run when CPUs are busy, so stocked entries are not mislabeled as waiting for a CPU.
+- **Stock** is shown for entries with a threshold (the maintainer only reads the stock when it has to compare it). Fluids are in mB. The stock isn't read while an entry is crafting, waiting to retry or waiting for a CPU; its last value is then shown in gray.
 - **Status** is one of: `stocked`, `crafting`, `requested`, `waiting for CPU`, `failed` (the Recent log says when it is retried), `not craftable`, `error`, or `waiting` before the entry's first check.
 - Rows that need attention (`failed`, `error`, `not craftable`) are listed first; the rest are alphabetical.
 - The header counts down to the next cycle.
 - By default (`settings.layout = "fit"`) the maintainer picks the screen resolution itself, so the table fills the screen with text as large as possible; with few entries the text is big, with many it gets smaller. `"columns"` instead keeps the resolution and splits the rows into side-by-side tables on wide screens. On a screen that is taller than wide (e.g. 2x3 blocks) `"fit"` uses narrower columns and short status words, so the text can be larger; `"tall"` uses them on any screen.
 - With a color GPU the rows are colored by status. If there are more entries than fit, the table has pages: the header shows `Page 1/3`, and Page Up/Down or the Up/Down arrows switch pages. `settings.showRecent = false` gives the table the whole screen.
-
-The CPU header reports observed idle/busy CPUs, refreshed after the pass and
-about once a second during the table countdown. Requests do not permanently
-subtract CPUs from that count: a short job can finish before the next entry is
-checked. A fresh CPU/job snapshot is taken immediately before submitting needed
-work. Stock checks happen before this capacity gate. The header counts all CPUs;
-if `cpuName` is configured, a different idle CPU does not satisfy that restriction.
-An idle CPU also does not guarantee it has enough crafting storage for a job.
-Row status remains the result of its last maintenance check; the header can show
-a newly idle CPU before that entry's next scheduled check.
 
 Set `settings.display = "log"` for the plain scrolling log instead.
 
@@ -271,8 +261,8 @@ refilling. Gray stock is the last observation, not a live inventory value.
 `settings.thresholdIntervals = {15, 30, 60, 120, 300}` sets the seconds between
 stock checks for stock/low ratios below 1.25, 2, 5, 10, and otherwise. Set every
 value to 0 to check each cycle. With low = 0, the last interval applies. The main
-cycle interval (`settings.sleep`, normally 10 seconds) still controls ordinary
-maintenance passes and rounds stock checks to the next cycle. A sudden large withdrawal may therefore
+cycle interval (`settings.sleep`, normally 10 seconds) still controls CPU polling
+and rounds stock checks to the next cycle. A sudden large withdrawal may therefore
 wait up to its scheduled interval plus one cycle before replenishment starts;
 choose shorter intervals for critical stock. Entries currently crafting or in a
 retry cooldown do not query inventory. CPU availability checks, fairness, cached
@@ -322,7 +312,6 @@ Run these from the repository root (Lua 5.2+ and Node.js):
 ```sh
 lua tests/maintenance.lua
 lua tests/refill-interval.lua
-lua tests/cpu-availability.lua
 lua tests/settings.lua
 lua tests/installer.lua
 lua tests/nei-bridge.lua

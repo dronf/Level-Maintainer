@@ -177,10 +177,9 @@ local lastConfig = nil -- config in use, to tell which entries changed on reload
 local warnedCpuName = false
 local turn = 0 -- which entry goes first this cycle; moves on by one every cycle
 
--- Actual AE2 observations; never decrement these as a scheduling estimate.
+-- Refreshed at the start of every cycle
 local itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
 local useNamedCpu = false
-local refreshCrafting
 
 local function cpuAvailable()
     if not settings.requireFreeCpu then
@@ -190,12 +189,6 @@ local function cpuAvailable()
         return not cpuBusy[settings.cpuName]
     end
     return freeCpus > 0
-end
-
-local function beforeSubmit(name)
-    if not refreshCrafting() then error("Unable to refresh crafting CPUs") end
-    if itemsCrafting[name] then return "crafting" end
-    if not cpuAvailable() then return "nocpu" end
 end
 
 local function maintainOnce(name, config, request)
@@ -213,9 +206,11 @@ local function maintainOnce(name, config, request)
     elseif state.checkAt and now < state.checkAt then
         -- Preserve the stocked status and last observed quantity.
         return
+    elseif not cpuAvailable() then
+        skip(name, "nocpu", name .. ": no free crafting CPU, skipping...")
     else
         local success, answer, result, amount = try(request, name, config[1], config[2], config[3],
-            {target = config.target, state = state, beforeSubmit = beforeSubmit})
+            {target = config.target, state = state})
         if amount ~= nil then
             lastAmount[name] = amount
             amountCycle[name] = cycleNumber
@@ -223,8 +218,6 @@ local function maintainOnce(name, config, request)
         if result == "stocked" then
             state.checkAt = computer.uptime() + thresholdDelay(amount, config[1])
             skip(name, "stocked", answer)
-        elseif result == "nocpu" or result == "crafting" then
-            skip(name, result, answer)
         elseif result == "missing" then
             logStatus(name, "missing", answer)
         elseif result == "failed" then
@@ -250,8 +243,14 @@ local function maintainOnce(name, config, request)
             retryAt[name] = nil
         end
 
-        -- Avoid duplicate work in this pass; CPU counts come only from AE2.
-        if success then itemsCrafting[name] = true end
+        -- The job now occupies a CPU for the rest of this cycle
+        if success then
+            itemsCrafting[name] = true
+            freeCpus = freeCpus - 1
+            if useNamedCpu then
+                cpuBusy[settings.cpuName] = true
+            end
+        end
     end
 end
 
@@ -275,16 +274,15 @@ local function maintain(name, config, request)
 end
 
 -- CPU/job snapshots are refreshed for ordinary cycles and due refill passes.
-refreshCrafting = function(countOnly)
-    local ok, observed
-    ok, observed, freeCpus, cpuBusy, totalCpus = pcall(ae2.checkIfCrafting, not countOnly)
+local function refreshCrafting()
+    local ok
+    ok, itemsCrafting, freeCpus, cpuBusy, totalCpus = pcall(ae2.checkIfCrafting)
     if not ok then
-        logInfo("ERROR: " .. tostring(observed))
+        logInfo("ERROR: " .. tostring(itemsCrafting))
         ae2.clearCache()
         itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
         return false
     end
-    if not countOnly then itemsCrafting = observed end
     useNamedCpu = settings.cpuName ~= nil and cpuBusy[settings.cpuName] ~= nil
     if settings.cpuName ~= nil and not useNamedCpu and not warnedCpuName then
         logInfo("WARNING: no crafting CPU named '" .. settings.cpuName .. "' found, AE2 will use any CPU.")
@@ -618,8 +616,6 @@ local function idle(timeout)
                 end
             end
         elseif countdown then
-            -- CPU jobs can finish while the ordinary maintenance loop sleeps.
-            refreshCrafting(true)
             display.setHeader(headerParts())
         end
     until computer.uptime() >= deadline
@@ -680,7 +676,6 @@ local function waitForNextCycle()
                     end
                 end
                 refillTurn = refillTurn + 1
-                refreshCrafting()
                 render()
                 display.endBatch()
             end
@@ -708,8 +703,6 @@ local function run()
             end
         end
 
-        -- Requests may have started or completed since the initial snapshot.
-        refreshCrafting()
         nextCycleAt = computer.uptime() + settings.sleep
         render()
         display.endBatch()
