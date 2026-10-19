@@ -514,8 +514,17 @@ end
 -- modification time either way, so a broken file is only reported once per save.
 local function readConfig()
     configTime = filesystem.lastModified(CONFIG_PATH)
-    return loadTable(CONFIG_PATH)
+    local cfg, err = loadTable(CONFIG_PATH)
+    if cfg then cfg = require("nei_bridge").merge(cfg) end
+    return cfg, err
 end
+
+-- Receive authorized clipboard maintenance requests from the NEI client.
+require("nei_bridge").install(function()
+    local cfg, err = readConfig()
+    if not cfg then error(err) end
+    applyConfig(cfg)
+end)
 
 -- Reloads config.lua and settings.lua if they were saved since they were last read.
 -- A file with a mistake is reported and the previous version stays in use.
