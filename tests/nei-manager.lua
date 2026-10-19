@@ -15,7 +15,7 @@ local gpu={getScreen=function()return screen end,getResolution=function()return 
 package.preload.component=function()return {gpu=gpu}end
 package.preload.computer=function()return {uptime=function()return clock end}end
 package.preload.shell=function()return {resolve=function(n)return "/home/"..n end}end
-package.preload.event=function()return {listen=function(_,fn)callback=fn end}end
+package.preload.event=function()return {listen=function(_,fn)callback=fn end,ignore=function(_,fn)if callback==fn then callback=nil end end}end
 package.preload.filesystem=function()return {
   exists=function(p)return files[p]~=nil end,remove=function(p)files[p]=nil;return true end,
   rename=function(a,b)
@@ -86,5 +86,6 @@ extra=true -- base configuration changes while the frozen snapshot is being read
 check(query(1)==original)
 query(2,"ffffffffffffffff");check(table.concat(pixels):gsub(" +$","")==original)
 check(query(0):find("|0|4||",1,true)) -- the next snapshot includes the external edit
+bridge.uninstall();check(callback==nil and not bridge.paint(gpu))
 print,io.open,loadfile=realPrint,realOpen,realLoadfile
 print("PASS: NEI manager "..checks.." checks: real screen frames, UTF-8, legacy entries, snapshots, expiry, delete tombstones, re-add, metadata, rollback, corrupt-file protection")

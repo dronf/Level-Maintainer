@@ -786,6 +786,7 @@ local ok, err = xpcall(main, function(msg)
     end
     return debug.traceback(tostring(msg), 2)
 end)
+require("nei_bridge").uninstall()
 display.stop()
 if not ok then
     if err == "interrupted" then

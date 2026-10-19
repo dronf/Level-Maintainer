@@ -97,7 +97,8 @@ function M.paint(gpu)
 end
 function M.errorFrame(token) return frame("LM2R|"..token.."|ERR|Screen too small") end
 function M.install(reload,getConfig)
-  event.listen("clipboard",function(_,keyboard,message,player)
+  M.uninstall()
+  M.listener=function(_,keyboard,message,player)
     if type(message)~="string" then return end
     if message:sub(1,4)=="LM2|" then
       local token,screen,index=message:match("^LM2|Q|(%x+)|([%x%-]+)|(%d+)$")
@@ -149,6 +150,11 @@ function M.install(reload,getConfig)
     local applied,reason=pcall(reload)
     if applied then print("[NEI LM] "..(deleting and "Removed " or "Updated ")..name)
     else print("[NEI LM] Reload failed: "..tostring(reason)) end
-  end)
+  end
+  event.listen("clipboard",M.listener)
+end
+function M.uninstall()
+  if M.listener then event.ignore("clipboard",M.listener) end
+  M.listener=nil;session=nil
 end
 return M
