@@ -31,13 +31,21 @@ $escapedArgs = $compilerArgs | ForEach-Object { '"' + $_.Replace('\','/').Replac
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
 $tests = Join-Path $project 'build/tests'
 $testSources = @(Get-ChildItem (Join-Path $project 'tests') -Filter '*.java' | ForEach-Object FullName)
-& $javac --release 8 -encoding UTF-8 -cp $classes -d $tests @testSources
+$testArgs = @('--release','8','-encoding','UTF-8','-cp',"$classes;$classpath",'-d',$tests) + $testSources
+$testArgsFile = Join-Path $project 'build/test-javac.args'
+[IO.File]::WriteAllLines($testArgsFile, @($testArgs | ForEach-Object { '"' + $_.Replace('\','/') + '"' }), [Text.UTF8Encoding]::new($false))
+& $javac "@$testArgsFile"
 if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed' }
 & $java -cp "$classes;$tests" dev.dronf.neilevel.BridgeCommandTest
 if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
 & $java -cp "$classes;$tests" dev.dronf.neilevel.ScreenReplyTest
 if ($LASTEXITCODE -ne 0) { throw 'Screen reply tests failed' }
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.0.jar'
+$inputArgsFile=Join-Path $project 'build/input-test.args'
+$inputArgs=@('-cp',"$classes;$tests;$classpath",'dev.dronf.neilevel.FieldFocusTest')
+[IO.File]::WriteAllLines($inputArgsFile,@($inputArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+& $java "@$inputArgsFile"
+if ($LASTEXITCODE -ne 0) { throw 'Real Minecraft text-field input tests failed' }
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.1.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar

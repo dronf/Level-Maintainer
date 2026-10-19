@@ -10,6 +10,7 @@ import java.io.*;
 
 public final class ManagerGui extends GuiScreen {
     private GuiTextField screen,search;
+    private FieldFocus input;
     private final List<MaintainedEntry> entries=new ArrayList<>(),incoming=new ArrayList<>();
     private List<MaintainedEntry> visible=new ArrayList<>();
     private String address="",filter="",status="Enter the OC screen UUID and click Refresh.",token;
@@ -29,6 +30,8 @@ public final class ManagerGui extends GuiScreen {
         rows=Math.max(1,(field_146295_m-150)/21);
         screen=new GuiTextField(field_146289_q,left,28,listWidth-74,18);screen.func_146203_f(36);screen.func_146180_a(address);
         search=new GuiTextField(field_146289_q,left+43,52,listWidth-43,18);search.func_146180_a(filter);
+        input=new FieldFocus(new GuiTextField[]{screen,search},new boolean[]{false,false});
+        input.focus(address.isEmpty()?0:1,false);
         rebuild();Keyboard.enableRepeatEvents(true);
         if(token==null && !screen.func_146179_b().isEmpty())refreshOnOpen=true;
     }
@@ -128,7 +131,8 @@ public final class ManagerGui extends GuiScreen {
     @Override protected void func_73869_a(char ch,int key) {
         if(key==Keyboard.KEY_ESCAPE) {field_146297_k.func_147108_a(null);return;}
         if(key==Keyboard.KEY_RETURN) {refresh();return;}
-        screen.func_146201_a(ch,key);search.func_146201_a(ch,key);
+        if(key==Keyboard.KEY_TAB) {input.next(GuiScreen.func_146272_n());return;}
+        input.key(ch,key);
         if(!screen.func_146179_b().equals(address)) {
             address=screen.func_146179_b();syncing=false;entries.clear();selected=-1;removeArmed=false;
             status="Screen changed; click Refresh to load its entries.";rebuild();
@@ -137,7 +141,7 @@ public final class ManagerGui extends GuiScreen {
         if(!f.equals(filter)) {filter=f;selected=-1;page=0;removeArmed=false;rebuild();}
     }
     @Override protected void func_73864_a(int x,int y,int b) {
-        super.func_73864_a(x,y,b);screen.func_146192_a(x,y,b);search.func_146192_a(x,y,b);
+        input.click(x,y,b);super.func_73864_a(x,y,b);
     }
     @Override public void func_146281_b() {Keyboard.enableRepeatEvents(false);}
 }

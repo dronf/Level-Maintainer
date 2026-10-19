@@ -53,7 +53,7 @@ local function run(settingsText, answer, failDownload, failRename)
         end
         files[p] = ""
         return {write = function(self, text) files[p] = files[p] .. text; return self end,
-            close = function() return true end}
+            flush = function(self) return self end, close = function() end}
     end
     io.read = function() prompts = prompts + 1; return answer or "n" end
     io.write, print, os.sleep = function() end, function() end, function() end

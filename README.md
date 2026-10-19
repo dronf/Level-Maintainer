@@ -368,3 +368,13 @@ use the active GPU's screen UUID. Open the screen once before syncing from NEI.
 This version has automated protocol, binary compatibility and mocked OpenOS/AE2
 tests; live gameplay testing of the new GUI and screen-sync path remains needed.
 
+The receiver explicitly flushes staged overrides before closing them. OpenOS
+may return nil with no error from a successful close, which must not be treated
+as a save failure. The same fix applies to the installer's settings refresh.
+Regression tests can use the unmodified OpenOS buffering code from your OC JAR:
+
+```sh
+python tests/extract-openos.py /path/to/OpenComputers-1.12.64-GTNH.jar /tmp/openos-lib
+lua tests/nei-openos-io.lua /tmp/openos-lib
+```
+

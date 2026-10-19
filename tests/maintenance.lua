@@ -148,7 +148,7 @@ fs.rename = function(a,b) memory[b],memory[a] = memory[a],nil; return true end
 io.open = function(p,mode)
     if not p:find("nei_overrides.lua",1,true) then return realOpen(p,mode) end
     memory[p] = ""
-    return {write=function(self,s) memory[p]=memory[p]..s; return self end, close=function() return true end}
+    return {write=function(self,s) memory[p]=memory[p]..s; return self end, flush=function(self) return self end, close=function() end}
 end
 loadfile = function(p)
     if p == "nei_overrides.lua" then return memory[p] and load(memory[p],"=overrides","t",{}) or nil end

@@ -29,7 +29,7 @@ io.open = function(p,mode)
   if not p:match("^/home/") then return realOpen(p,mode) end
   check(mode == "w")
   files[p] = ""
-  return {write = function(self,s) files[p]=files[p]..s; return self end, close=function() return true end}
+  return {write = function(self,s) files[p]=files[p]..s; return self end, flush=function(self) return self end, close=function() end}
 end
 print = function(s) logs[#logs+1] = s end
 local bridge = assert(realLoadfile("nei_bridge.lua"))()

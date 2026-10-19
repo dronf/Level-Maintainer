@@ -1,10 +1,10 @@
-# Version 1.1.0 verification — 2026-10-19
+# Version 1.1.1 verification — 2026-10-19
 
-Built `nei-level-maintainer-1.1.0.jar` with JDK 17 `javac --release 8` against
-the actual GTNH 2.9 RC2 binaries. All 10 addon classes use Java 8 class format 52.
+Built `nei-level-maintainer-1.1.1.jar` with JDK 17 `javac --release 8` against
+the actual GTNH 2.9 RC2 binaries. All 11 addon classes use Java 8 class format 52.
 The JAR contains only addon classes, metadata and the manifest.
 
-SHA-256: `7994edad371481f3be85416c6c39e1a3e26356a2729bc520c066b7a60a115817`
+SHA-256: `63f4880f9f9edd3ef390738ccea03a6f57c74ddb7792ea04eb615c3ebcf72927`
 
 | Dependency | Version | SHA-256 |
 | --- | --- | --- |
@@ -14,10 +14,22 @@ SHA-256: `7994edad371481f3be85416c6c39e1a3e26356a2729bc520c066b7a60a115817`
 
 Completed checks:
 
+- Reproduced the exact `[NEI LM] Save failed: nil` failure against the pre-fix
+  receiver using the unmodified OpenOS buffer implementation extracted from the
+  installed OC JAR. The fixed receiver passes all 9 regression checks, including
+  successful nil-return closes, real buffered flush failure, close error,
+  preservation of existing data, removal and re-addition.
+- 27 input checks using real Minecraft GuiTextField instances passed. Font
+  metrics were stubbed to avoid OpenGL; Minecraft text storage, selection,
+  insertion, cursor and focus methods were executed unchanged. Coverage includes
+  mouse and Tab focus, replacement, keypad input, reversed selections at the
+  length limit, Ctrl+A and recovery from lost focus. Whole-game GUI integration
+  remains untested.
+
 - Java compilation against exact pack dependencies; production SRG names used
   directly, including all overridden GUI methods.
 - JVM loading with `-Xverify:all`, metadata/namespace checks and common entrypoint
-  initialization. All 881 field/method references resolved against real Minecraft,
+  initialization. All 958 field/method references resolved against real Minecraft,
   Forge, OC, NEI and pack libraries, including static/instance access.
 - 20 Java update-command checks: wire format, UUIDs, numeric validation, UTF-8
   name length and disallowed delimiters/control characters.

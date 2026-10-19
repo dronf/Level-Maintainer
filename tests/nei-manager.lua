@@ -29,7 +29,7 @@ loadfile=function(p)
 end
 io.open=function(p,mode)
   if p:sub(1,6)~="/home/"then return realOpen(p,mode)end
-  files[p]="";return {write=function(self,s)if failWrite then return nil,"disk full" end;files[p]=files[p]..s;return self end,close=function()return true end}
+  files[p]="";return {write=function(self,s)if failWrite then return nil,"disk full" end;files[p]=files[p]..s;return self end,flush=function(self)return self end,close=function()end}
 end
 print=function(s)logs[#logs+1]=s end
 local bridge=assert(realLoadfile("nei_bridge.lua"))()

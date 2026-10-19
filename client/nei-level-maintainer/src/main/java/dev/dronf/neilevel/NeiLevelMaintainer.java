@@ -4,7 +4,7 @@ import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 
-@Mod(modid="neilevelmaintainer", name="NEI Level Maintainer", version="1.1.0",
+@Mod(modid="neilevelmaintainer", name="NEI Level Maintainer", version="1.1.1",
     acceptedMinecraftVersions="[1.7.10]", acceptableRemoteVersions="*",
     dependencies="required-after:NotEnoughItems;required-after:OpenComputers")
 public final class NeiLevelMaintainer {
