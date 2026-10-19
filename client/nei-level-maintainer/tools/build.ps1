@@ -59,7 +59,7 @@ $editorArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.d
 [IO.File]::WriteAllLines($editorArgsFile,@($editorArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$editorArgsFile"
 if ($LASTEXITCODE -ne 0) { throw 'Real editor input / button rendering tests failed' }
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.3.jar'
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.4.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar

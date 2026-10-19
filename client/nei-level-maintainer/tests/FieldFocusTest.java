@@ -55,6 +55,19 @@ public final class FieldFocusTest {
         input.key((char)0,2);input.key((char)0,11);check(fields[1].func_146179_b().equals("10"));
         input.key((char)0,14);check(fields[1].func_146179_b().equals("1"));
         input.click(110,25,0);input.key((char)0,211);check(fields[1].func_146179_b().isEmpty());
+        // lwjgl3ify queues a physical press and a separate key=0 text event.
+        // Each pair must insert once; two physical presses must still insert twice.
+        for(int digit=0;digit<=9;digit++) {
+            int top=digit==0?11:digit+1;
+            int pad=new int[]{82,79,80,81,75,76,77,71,72,73}[digit];
+            for(int code:new int[]{top,pad}) {
+                input.click(110,25,0);
+                input.key((char)0,code);input.key((char)('0'+digit),0);
+                check(fields[1].func_146179_b().equals(String.valueOf(digit)));
+                input.key((char)0,code);input.key((char)('0'+digit),0);
+                check(fields[1].func_146179_b().equals(""+digit+digit));
+            }
+        }
         System.out.println("PASS: real Minecraft text-field focus/input checks: "+checks);
     }
 }
