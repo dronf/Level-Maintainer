@@ -1,57 +1,20 @@
-# NEI Level Maintainer 1.1.2
+# NEI Level Maintainer 1.1.5
 
-Client-only Minecraft 1.7.10 addon for GTNH 2.9 RC2, NEI 2.8.155-GTNH and
-OpenComputers 1.12.64-GTNH. Includes an editor and a searchable, paginated manager
-that reads the computer's real configuration, including base config entries and
-NEI overrides. No new server mod, network channel or external service is required.
+Client-only Minecraft 1.7.10 mod built against actual GTNH 2.9 RC2, NEI 2.8.155-GTNH and OpenComputers 1.12.64-GTNH dependencies.
 
-## Upgrade both sides
-
-**1.1.2 is a client-only correction.** If the OC computer already has the PR #8
-save fix, replace only the client JAR and restart Minecraft. No new Lua files
-are needed. Numeric clicks now select the whole value even when that field was
-already focused; this includes the initially focused Low field. Previously a
-click there cleared selection and typed digits were inserted into the old value.
-Hover add and existing-entry edit use the same locked-name field layout.
-
-Release Ctrl+M before editing: hotkey opening is deferred until the old NEI input
-event has finished and the shortcut keys are released. Wide buttons now use
-solid rectangle drawing, avoiding the white center stripe caused by stretching
-Minecraft's vanilla 200-pixel button texture beyond its supported width.
-
-The following script-update instructions apply when upgrading an older OC
-installation; an already updated computer does not need another update for 1.1.2.
-
-1.1.1 corrects OpenOS save failures (`[NEI LM] Save failed: nil`). The receiver
-now explicitly flushes and accepts a nil close result without an error. Existing
-entries are preserved on genuine write, flush or close failures. The installer
-also handles OpenOS closes when refreshing settings. Update the scripts even
-if you keep the 1.1.0 client JAR; persistence requires this script correction.
-
-The 1.1.1 client also makes focus explicit, selects numeric values when entering
-a field, supports keypad scan codes without a character, and normalizes reversed
-selections to work around a vanilla length-limit replacement bug. Once the UUID
-is filled, Low is initially selected. Tab/Shift+Tab and Ctrl+A work in the editor.
-
-1. Close Minecraft. Remove older NEI Level Maintainer JARs from the instance's
-   Mods list and add `nei-level-maintainer-1.1.2.jar`. Keep the pack's NEI and OC.
-2. On the OC computer, stop Maintainer with Ctrl+Alt+C. Back up its directory.
-   After the companion script PR is merged, run this from that directory:
+Close Minecraft. Remove the older NEI Level Maintainer JAR from the Prism instance mods folder, add nei-level-maintainer-1.1.5.jar, and restart Minecraft. Keep exactly one copy of the addon. No additional Lua update is required if the OC receiver was updated for 1.1.3. For older OC installations, run the normal installer from the Maintainer directory, preserving your configuration and overrides:
 
 ```sh
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua installer.lua && installer
 ```
 
-The installer preserves existing configuration and overrides and reboots. Before
-that PR is merged, use the supplied `level-maintainer-oc-1.1.1.zip`: copy
-`Maintainer.lua`, `nei_bridge.lua`, and `src/` into the existing installation,
-preserving `config.lua`, `settings.lua` and `nei_overrides.lua`. Then restart OC
-to clear Lua's cached modules. New installs also need the supplied configuration
-examples copied to `config.lua` and `settings.lua`.
+The 1.1.5 changes clear leftover numeric characters from lwjgl3ify's shared SDL text buffer, release NEI's search/widget focus while editing, reassert the active field even when its vanilla focus flag is already true, and blur fields on close or resize. Stale container key callbacks are forwarded to the visible editor and consumed before NEI's search handler. Numeric keys still use only physical events to prevent doubled digits. Non-numeric text fields retain normal text input.
 
-Run Maintainer from its installation directory. Leave it running during every
-NEI operation. Do not leave the computer in the `lua>` interpreter; clipboard
-commands sent there become pasted text, not maintenance requests.
+The manager previously waited another 100 ms after every successful entry reply. That wait is removed. Reading 20 / 23 means it is fetching entry 20 of 23 through the existing OC clipboard request/screen reply path. It still waits for one round trip per entry; network/server ticks, OC execution and screen synchronization affect elapsed time. The screenshot does not measure crafting throughput. No GPU/CPU upgrade is required by this change.
+
+Test both Ctrl+M hover creation and Manage > Edit. Click Low, Target and Batch, replace the number with top-row digits and then keypad digits, clear it using Backspace/Delete, and save. Also test Tab, repeated digits, closing/reopening, and resizing. Return to NEI: its previous search text should remain unchanged, with none of the typed amounts appended. Refresh the manager and check the loaded entry count and values.
+
+No server-side mod, new network channel or external service is used. Leave Maintainer running on the OC computer during NEI operations.
 
 ## Open and use the manager
 
