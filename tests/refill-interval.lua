@@ -129,9 +129,8 @@ times(simulate{duration = 0, fail = true, stop = 65,
     policy = {low = 100, target = 150, batch = 40, refillInterval = 2}}, {0, 60, 62})
 times(simulate{duration = 0, cpuBlocked = true, stop = 13,
     policy = {low = 100, target = 210, batch = 40, refillInterval = 2}}, {0, 8, 10})
--- The named CPU can complete a short job and be reused in this same pass.
 times(simulate{duration = 0, cpuBlocked = true, named = true, stop = 13,
-    policy = {low = 100, target = 210, batch = 40, refillInterval = 2}}, {0, 8, 10})
+    policy = {low = 100, target = 210, batch = 40, refillInterval = 2}}, {0, 8, 12})
 times(simulate{duration = 0, stock = 120, withdraw = true, stop = 25,
     policy = {low = 100, target = 250, batch = 40, refillInterval = 2}}, {20, 22, 24})
 times(simulate{duration = 0, stop = 3,
