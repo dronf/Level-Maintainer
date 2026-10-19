@@ -127,10 +127,12 @@ function M.install(reload,getConfig)
       if done then if session and session.token==done then session=nil end; return end
     end
     local kind,name,low,target,batch=message:match("^LM1|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")
+    local previousKind,newKind,newName,newLow,newTarget,newBatch=message:match("^LM2|T|([IF])|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")
+    if previousKind then kind,name,low,target,batch=newKind,newName,newLow,newTarget,newBatch end
     local deleteKind,deleteName=message:match("^LM2|D|([IF])|([^|]+)$")
     local deleting=deleteKind~=nil
     if deleting then kind,name=deleteKind,deleteName end
-    if message:sub(1,4)~="LM1|" and not deleting then return end
+    if message:sub(1,4)~="LM1|" and not deleting and not previousKind then return end
     low,target,batch=tonumber(low),tonumber(target),tonumber(batch)
     if not kind or not nameOK(name) or (not deleting and
       (not low or not target or not batch or low>target or batch<1 or target>1e12 or batch>1e12
@@ -150,6 +152,7 @@ function M.install(reload,getConfig)
       end
       data[section][name]=spec
     end
+    if previousKind and previousKind~=kind then data[previousKind=="I" and "items" or "fluids"][name]=false end
     local ok,why=save(data)
     if not ok then print("[NEI LM] Save failed: "..tostring(why)); return end
     session=nil

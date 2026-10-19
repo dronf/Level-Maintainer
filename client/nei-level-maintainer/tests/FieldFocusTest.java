@@ -51,6 +51,10 @@ public final class FieldFocusTest {
         fields[3].func_146191_b("");check(fields[3].func_146179_b().isEmpty());
         for(int key:new int[]{82,79,80,81,75,76,77,71,72,73})check(FieldFocus.keypadDigit(key)>=0);
         check(FieldFocus.keypadDigit(30)==-1);
+        input.click(110,25,0);input.key((char)0,14);check(fields[1].func_146179_b().isEmpty());
+        input.key((char)0,2);input.key((char)0,11);check(fields[1].func_146179_b().equals("10"));
+        input.key((char)0,14);check(fields[1].func_146179_b().equals("1"));
+        input.click(110,25,0);input.key((char)0,211);check(fields[1].func_146179_b().isEmpty());
         System.out.println("PASS: real Minecraft text-field focus/input checks: "+checks);
     }
 }

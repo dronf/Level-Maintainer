@@ -14,7 +14,7 @@ public final class FieldFocus {
     }
     public void focus(int index,boolean select) {
         active=index;
-        for(int i=0;i<fields.length;i++)fields[i].func_146195_b(i==active);
+        for(int i=0;i<fields.length;i++)if(fields[i].func_146206_l()!=(i==active))fields[i].func_146195_b(i==active);
         if(active>=0&&select&&replace[active])selectAll(fields[active]);
     }
     private static void selectAll(GuiTextField field) {field.func_146196_d();field.func_146199_i(field.func_146179_b().length());}
@@ -38,8 +38,8 @@ public final class FieldFocus {
         focus(active,false);
         if(ch==1) {selectAll(fields[active]);return;}
         // Some keyboard layouts supply keypad scan codes without a text character.
-        if(ch==0&&replace[active]) {
-            int digit=keypadDigit(key);if(digit>=0)ch=(char)('0'+digit);
+        if(replace[active]) {
+            int digit=key>=2&&key<=11?(key==11?0:key-1):keypadDigit(key);if(digit>=0)ch=(char)('0'+digit);
         }
         // Vanilla 1.7.10 can reject replacement at the length limit when the
         // selection points backwards. Normalize it before typing or pasting.
@@ -47,6 +47,13 @@ public final class FieldFocus {
         if((ch>=32||ch==22)&&!field.func_146207_c().isEmpty()) {
             int cursor=field.func_146198_h(),anchor=field.func_146186_n();
             if(cursor>anchor) {field.func_146190_e(anchor);field.func_146199_i(cursor);}
+        }
+        // Do not route insertion through textboxKeyTyped: lwjgl3ify redirects
+        // that call to its SDL buffer, discarding supplied characters.
+        if(key==14 || key==211) {field.func_146175_b(key==14?-1:1);return;}
+        if(replace[active] && ch>=32 && ch!=127) {
+            if(ch>='0'&&ch<='9')field.func_146191_b(String.valueOf(ch));
+            return;
         }
         fields[active].func_146201_a(ch,key);
     }

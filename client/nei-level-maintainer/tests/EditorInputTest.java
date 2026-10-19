@@ -26,7 +26,9 @@ public final class EditorInputTest {
         Method click=MaintenanceGui.class.getDeclaredMethod("func_73864_a",int.class,int.class,int.class);click.setAccessible(true);
         click.invoke(gui,f.field_146209_f+8,f.field_146210_g+8,0);
         Method key=MaintenanceGui.class.getDeclaredMethod("func_73869_a",char.class,int.class);key.setAccessible(true);
-        for(char c:value.toCharArray())key.invoke(gui,c,0);
+        key.invoke(gui,(char)0,14);
+        check(f.func_146179_b().isEmpty());
+        for(char c:value.toCharArray())key.invoke(gui,(char)0,c=='0'?11:c-'0'+1);
         if(!field(gui,name).func_146179_b().equals(value))throw new AssertionError(name+": expected "+value+", got "+field(gui,name).func_146179_b());
         checks++;
     }
@@ -57,6 +59,9 @@ public final class EditorInputTest {
         hover.func_146280_a(mc,640,360);
         replace(hover,"low","10");replace(hover,"target","64");replace(hover,"batch","16");
         check(BridgeCommand.item(field(hover,"name").func_146179_b(),field(hover,"low").func_146179_b(),field(hover,"target").func_146179_b(),field(hover,"batch").func_146179_b()).equals("LM1|I|New Test Item|10|64|16"));
+        Field buttons=GuiScreen.class.getDeclaredField("field_146292_n");buttons.setAccessible(true);GuiButton type=null;for(Object button:(java.util.List)buttons.get(hover))if(((GuiButton)button).field_146127_k==5)type=(GuiButton)button;
+        check(type!=null&&type.field_146124_l);hover.func_146284_a(type);check(type.field_146126_j.equals("Fluid"));
+        hover.func_146284_a(type);check(type.field_146126_j.equals("Item"));
         hover.func_146280_a(mc,800,400);
         check(field(hover,"low").func_146179_b().equals("10")&&field(hover,"target").func_146179_b().equals("64"));
         MaintenanceGui managed=new MaintenanceGui(null,new MaintainedEntry("I","Existing Item","100000","120000","100",""),prefs.getProperty("screen"));

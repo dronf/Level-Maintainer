@@ -11,9 +11,9 @@ public final class MaintenanceGui extends GuiScreen {
     private final ManagerGui parent;
     private final MaintainedEntry entry;
     private final boolean nameLocked;
-    private String initialName="",address,kind="I",feedback="";
+    private String initialName="",address,kind="I",savedKind="I",feedback="";
     private GuiTextField screen,name,low,target,batch;
-    private boolean removeArmed;
+    private boolean removeArmed,submitted;
     private FieldFocus input;
     public MaintenanceGui(ItemStack stack) {this(null,null,"",true);initialName=stack.func_82833_r();}
     public MaintenanceGui(ManagerGui parent,MaintainedEntry entry,String address) {
@@ -22,7 +22,8 @@ public final class MaintenanceGui extends GuiScreen {
     private MaintenanceGui(ManagerGui parent,MaintainedEntry entry,String address,boolean nameLocked) {
         this.parent=parent;this.entry=entry;this.address=address;
         this.nameLocked=nameLocked;
-        if(entry!=null) {initialName=entry.name;kind=entry.kind;}
+        submitted=entry!=null;
+        if(entry!=null) {initialName=entry.name;kind=entry.kind;savedKind=kind;}
     }
     private File prefsFile() {return new File(field_146297_k.field_71412_D,"config/nei-level-maintainer.properties");}
     private GuiTextField field(int x,int y,int w,String value,int max) {
@@ -46,7 +47,7 @@ public final class MaintenanceGui extends GuiScreen {
         field_146292_n.add(new FlatButton(2,x+184,y+133,86,20,"Back"));
         field_146292_n.add(new FlatButton(4,x,y+157,270,20,"Manage existing entries"));
         GuiButton type=new FlatButton(5,x+214,y+24,56,20,kind.equals("I")?"Item":"Fluid");
-        type.field_146124_l=!nameLocked;field_146292_n.add(type);
+        type.field_146124_l=true;field_146292_n.add(type);
         if(entry!=null && entry.target.isEmpty())feedback="Legacy entry: enter a Target to convert to Low/Target mode.";
         input=new FieldFocus(fields(),nameLocked?new boolean[]{false,true,true,true}:new boolean[]{false,false,true,true,true});
         input.focus(screen.func_146179_b().isEmpty()?(nameLocked?0:1):(nameLocked?1:2),true);
@@ -58,14 +59,17 @@ public final class MaintenanceGui extends GuiScreen {
         int id=b.field_146127_k;
         if(id==2) {back();return;}
         if(id==4) {field_146297_k.func_147108_a(parent==null?new ManagerGui(screen.func_146179_b()):parent);return;}
-        if(id==5 && !nameLocked) {kind=kind.equals("I")?"F":"I";b.field_146126_j=kind.equals("I")?"Item":"Fluid";removeArmed=false;
+        if(id==5) {kind=kind.equals("I")?"F":"I";b.field_146126_j=kind.equals("I")?"Item":"Fluid";removeArmed=false;
             for(Object button:field_146292_n)if(((GuiButton)button).field_146127_k==3)((GuiButton)button).field_146126_j="Remove";return;}
         if(id!=1&&id!=3)return;
         if(id==3&&!removeArmed) {removeArmed=true;b.field_146126_j="Confirm?";feedback="Click Confirm? to stop maintaining this entry.";return;}
         try {
             address=BridgeCommand.address(screen.func_146179_b());
-            String command=id==3?BridgeCommand.remove(kind,name.func_146179_b()):BridgeCommand.update(kind,name.func_146179_b(),low.func_146179_b(),target.func_146179_b(),batch.func_146179_b());
+            String command=id==3?BridgeCommand.remove(submitted?savedKind:kind,name.func_146179_b()):BridgeCommand.update(kind,name.func_146179_b(),low.func_146179_b(),target.func_146179_b(),batch.func_146179_b());
+            if(id==1 && submitted && !kind.equals(savedKind))
+                command="LM2|T|"+savedKind+"|"+command.substring(4);
             ClipboardTransport.send(address,command);
+            if(id==1){savedKind=kind;submitted=true;}
             feedback=id==3?"Removal submitted. Check OC for Removed.":"Update submitted. Check OC for Updated.";
             if(parent!=null)parent.changed();
             Properties prefs=new Properties();prefs.setProperty("screen",address);

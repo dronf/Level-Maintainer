@@ -54,6 +54,10 @@ local restarted = assert(realLoadfile("nei_bridge.lua"))()
 check(restarted.merge({}).items["Iron Ingot"].batch == 64)
 send("LM1|I|Iron Ingot|200|400|32")
 check(merged.items["Iron Ingot"].low == 200)
+send("LM2|T|I|F|Iron Ingot|20|64|16")
+check(merged.items["Iron Ingot"]==nil and merged.fluids["Iron Ingot"].target==64)
+send("LM2|T|F|I|Iron Ingot|200|400|32")
+check(merged.fluids["Iron Ingot"]==nil and merged.items["Iron Ingot"].target==400)
 local old, count = files[path], reloads
 for _, command in ipairs({"ordinary clipboard", "LM1|I|Bad|300|200|1", "LM1|I|Bad|-1|200|1",
   "LM1|I|Bad|0|200|0", "LM1|I|Bad|0|1000000000001|1", "LM1|I||0|200|1",
