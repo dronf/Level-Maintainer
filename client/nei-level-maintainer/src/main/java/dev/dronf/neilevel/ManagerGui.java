@@ -37,25 +37,25 @@ public final class ManagerGui extends GuiScreen {
     }
     private void rebuild() {
         field_146292_n.clear();
-        field_146292_n.add(new GuiButton(1,left+listWidth-68,27,68,20,"Refresh"));
+        field_146292_n.add(new FlatButton(1,left+listWidth-68,27,68,20,"Refresh"));
         visible=new ArrayList<>();
         for(MaintainedEntry e:entries)if((e.name+" "+e.kind).toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))visible.add(e);
         page=Math.max(0,Math.min(page,Math.max(0,(visible.size()-1)/rows)));
         for(int r=0;r<rows;r++) {
             int at=page*rows+r;if(at>=visible.size())break;
             String label=(selected==at?"> ":"")+visible.get(at).summary();
-            field_146292_n.add(new GuiButton(100+r,left,77+r*21,listWidth,20,field_146289_q.func_78269_a(label,listWidth-10)));
+            field_146292_n.add(new FlatButton(100+r,left,77+r*21,listWidth,20,field_146289_q.func_78269_a(label,listWidth-10)));
         }
         int y=field_146295_m-66,bw=(listWidth-12)/5;
         String[] labels={"Add","Edit",removeArmed?"Confirm?":"Remove","Prev","Next"};
         for(int i=0;i<5;i++) {
-            GuiButton b=new GuiButton(2+i,left+i*(bw+3),y,bw,20,labels[i]);
+            GuiButton b=new FlatButton(2+i,left+i*(bw+3),y,bw,20,labels[i]);
             b.field_146124_l=!syncing && (i!=1&&i!=2 || selected>=0&&selected<visible.size());
             if(i==3)b.field_146124_l=!syncing&&page>0;
             if(i==4)b.field_146124_l=!syncing&&(page+1)*rows<visible.size();
             field_146292_n.add(b);
         }
-        field_146292_n.add(new GuiButton(7,left,field_146295_m-24,listWidth,20,"Done"));
+        field_146292_n.add(new FlatButton(7,left,field_146295_m-24,listWidth,20,"Done"));
     }
     private void refresh() {
         try {

@@ -1,10 +1,10 @@
-# Version 1.1.1 verification — 2026-10-19
+# Version 1.1.2 verification — 2026-10-19
 
-Built `nei-level-maintainer-1.1.1.jar` with JDK 17 `javac --release 8` against
-the actual GTNH 2.9 RC2 binaries. All 11 addon classes use Java 8 class format 52.
+Built `nei-level-maintainer-1.1.2.jar` with JDK 17 `javac --release 8` against
+the actual GTNH 2.9 RC2 binaries. All 12 addon classes use Java 8 class format 52.
 The JAR contains only addon classes, metadata and the manifest.
 
-SHA-256: `63f4880f9f9edd3ef390738ccea03a6f57c74ddb7792ea04eb615c3ebcf72927`
+SHA-256: `6c7122928de2a76b9b3558fa86368e18a23b3f52e10af1aa29ffd74cd6025d76`
 
 | Dependency | Version | SHA-256 |
 | --- | --- | --- |
@@ -13,6 +13,16 @@ SHA-256: `63f4880f9f9edd3ef390738ccea03a6f57c74ddb7792ea04eb615c3ebcf72927`
 | OC | 1.12.64-GTNH | `f1fba20d2b76b61463dc1356aac1dc80f1054c3e22260b5232849228e9d1d404` |
 
 Completed checks:
+
+- 47 additional checks execute the actual MaintenanceGui initialization, mouse
+  clicks, keyboard input and reinitialization using real Minecraft GUI classes.
+  Hover add, existing-entry edit and manual add all replace their previous Low,
+  Target and Batch values correctly. A typed 10/64/16 hover entry produces the
+  exact expected clipboard command, and values survive resolution changes.
+  The test also checks FlatButton drawing at widths from 56 through 480 pixels,
+  with rectangle/label drawing recorded instead of issuing OpenGL calls. Wide
+  fills remain inside the button bounds and do not sample a widget texture.
+  This reproduced the first-field click defect that isolated field tests missed.
 
 - Reproduced the exact `[NEI LM] Save failed: nil` failure against the pre-fix
   receiver using the unmodified OpenOS buffer implementation extracted from the
@@ -29,7 +39,7 @@ Completed checks:
 - Java compilation against exact pack dependencies; production SRG names used
   directly, including all overridden GUI methods.
 - JVM loading with `-Xverify:all`, metadata/namespace checks and common entrypoint
-  initialization. All 958 field/method references resolved against real Minecraft,
+  initialization. All 1002 field/method references resolved against real Minecraft,
   Forge, OC, NEI and pack libraries, including static/instance access.
 - 20 Java update-command checks: wire format, UUIDs, numeric validation, UTF-8
   name length and disallowed delimiters/control characters.

@@ -24,9 +24,11 @@ public final class FieldFocus {
         for(int i=0;i<fields.length;i++) {
             GuiTextField f=fields[i];
             if(x>=f.field_146209_f&&x<f.field_146209_f+f.field_146218_h&&y>=f.field_146210_g&&y<f.field_146210_g+f.field_146219_i) {
-                boolean entering=active!=i;focus(i,false);
+                focus(i,false);
                 f.func_146192_a(x,y,button);
-                if(entering&&replace[i])focus(i,true);
+                // A numeric click means replace the value, including the
+                // initially focused field and repeated clicks on that field.
+                if(replace[i])focus(i,true);
                 return;
             }
         }
