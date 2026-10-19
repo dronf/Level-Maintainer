@@ -48,8 +48,12 @@ function AE2.configure(settings)
 end
 
 -- Starts a crafting calculation and waits for it to finish.
--- Returns true, or false plus AE2's failure reason.
-local function submit(craftable, count)
+-- Returns true, false plus AE2's failure reason, or a preflight status.
+local function submit(craftable, count, policy, name)
+    if policy and policy.beforeSubmit then
+        local blocked = policy.beforeSubmit(name)
+        if blocked then return false, nil, blocked end
+    end
     local craft
     if cpuName then
         craft = craftable.request(count, true, cpuName)
@@ -140,7 +144,11 @@ function AE2.requestItem(name, threshold, count, fluidName, policy)
         end
 
         if item.label == name then
-            local ok, reason = submit(craftable, count)
+            local ok, reason, blocked = submit(craftable, count, policy, name)
+            if blocked then
+                return false, blocked == "crafting" and (name .. " is already being crafted, skipping...")
+                    or (name .. ": no free crafting CPU, skipping..."), blocked, amount
+            end
             if not ok then
                 return false, "Failed to request " .. name .. " x " .. count .. " (" .. tostring(reason) .. ")", "failed", amount
             else
@@ -179,7 +187,11 @@ function AE2.requestFluid(name, threshold, count, fluidName, policy)
             end
         end
 
-        local ok, reason = submit(craftable, count)
+        local ok, reason, blocked = submit(craftable, count, policy, name)
+        if blocked then
+            return false, blocked == "crafting" and (name .. " is already being crafted, skipping...")
+                or (name .. ": no free crafting CPU, skipping..."), blocked, amount
+        end
         if not ok then
             return false, "Failed to request " .. name .. " x " .. count .. " mB (" .. tostring(reason) .. ")", "failed", amount
         else
@@ -191,7 +203,8 @@ end
 
 -- Returns: set of labels currently being crafted, number of idle CPUs,
 -- a name -> busy map of all CPUs, and the total number of CPUs.
-function AE2.checkIfCrafting()
+-- Pass false to skip finalOutput callbacks when only refreshing header counts.
+function AE2.checkIfCrafting(includeItems)
     local cpus = ME.getCpus()
     local items = {}
     local freeCpus = 0
@@ -201,9 +214,9 @@ function AE2.checkIfCrafting()
         totalCpus = totalCpus + 1
         -- Only a busy CPU has a job to report (saves a call per idle CPU per cycle)
         if v.busy then
-            local finaloutput = v.cpu.finalOutput()
-            if finaloutput ~= nil then
-                items[finaloutput.label] = true
+            if includeItems ~= false then
+                local finaloutput = v.cpu.finalOutput()
+                if finaloutput ~= nil then items[finaloutput.label] = true end
             end
         else
             freeCpus = freeCpus + 1
