@@ -28,7 +28,7 @@ public final class EditorInputTest {
         Method key=MaintenanceGui.class.getDeclaredMethod("func_73869_a",char.class,int.class);key.setAccessible(true);
         key.invoke(gui,(char)0,14);
         check(f.func_146179_b().isEmpty());
-        for(char c:value.toCharArray())key.invoke(gui,(char)0,c=='0'?11:c-'0'+1);
+        for(char c:value.toCharArray()) {key.invoke(gui,(char)0,c=='0'?11:c-'0'+1);key.invoke(gui,c,0);}
         if(!field(gui,name).func_146179_b().equals(value))throw new AssertionError(name+": expected "+value+", got "+field(gui,name).func_146179_b());
         checks++;
     }

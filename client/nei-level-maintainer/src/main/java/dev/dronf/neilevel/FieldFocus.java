@@ -37,6 +37,10 @@ public final class FieldFocus {
         if(active<0)return;
         focus(active,false);
         if(ch==1) {selectAll(fields[active]);return;}
+        // lwjgl3ify emits key=0 text events in addition to physical presses.
+        // Numbers use physical keys only; accepting both would double each digit.
+        // Control characters (e.g. paste) still use the normal edit commands.
+        if(replace[active] && key==0 && ch>=32)return;
         // Some keyboard layouts supply keypad scan codes without a text character.
         if(replace[active]) {
             int digit=key>=2&&key<=11?(key==11?0:key-1):keypadDigit(key);if(digit>=0)ch=(char)('0'+digit);
