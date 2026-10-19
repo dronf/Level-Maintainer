@@ -4,7 +4,7 @@ local realOpen, realLoadfile, realPrint = io.open, loadfile, print
 local callback, files, reloads, failRename, logs = nil, {}, 0, false, {}
 local checks = 0
 local function check(ok) checks = checks + 1; assert(ok, "receiver check " .. checks) end
-package.preload.event = function() return {listen = function(name, fn)
+package.preload.event = function() return {ignore = function() end, listen = function(name, fn)
   check(name == "clipboard"); callback = fn
 end} end
 package.preload.shell = function() return {resolve = function(name) return "/home/" .. name end} end

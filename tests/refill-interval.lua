@@ -69,7 +69,7 @@ local function simulate(options)
     package.loaded.event, package.loaded.filesystem, package.loaded.shell = nil, nil, nil
     package.preload.component = function() return {isAvailable = function() return true end, me_interface = me} end
     package.preload.computer = function() return {uptime = function() return now end} end
-    package.preload.event = function() return {listen = function() end, pull = function(timeout)
+    package.preload.event = function() return {listen = function() end, ignore = function() end, pull = function(timeout)
         if options.reload and not edited and now + timeout >= 1 then
             now, edited, timestamp = 1, true, timestamp + 1
             if options.change then
@@ -86,7 +86,7 @@ local function simulate(options)
         update()
         if now >= stop then error("interrupted", 0) end
     end} end
-    package.preload.filesystem = function() return {lastModified = function() return timestamp end} end
+    package.preload.filesystem = function() return {lastModified = function() return timestamp end, exists = function() return false end} end
     package.preload.shell = function() return {resolve = function(p) return p end} end
     package.preload["src.Display"] = function()
         return setmetatable({isActive = function() return false end}, {__index = function() return function() end end})

@@ -74,7 +74,7 @@ end
 
 -- Execute the actual main loop with a deterministic clock and mocked display.
 package.preload.event = function()
-    return {listen = function() end, pull = function(timeout)
+    return {listen = function() end, ignore = function() end, pull = function(timeout)
         now = now + timeout
         if now >= stopAt then error("interrupted", 0) end
         if edit then
@@ -86,7 +86,7 @@ package.preload.event = function()
         end
     end}
 end
-package.preload.filesystem = function() return {lastModified = function() return fileTime end} end
+package.preload.filesystem = function() return {lastModified = function() return fileTime end, exists = function() return false end} end
 package.preload.shell = function() return {resolve = function(path) return path end} end
 package.preload["src.Display"] = function()
     local d = {isActive = function() return false end}
@@ -135,3 +135,38 @@ run({low = 100, target = 150, batch = 40}, 90, 30)
 assert(#requests == 1) -- changed entry resets state; 130 is above low
 print("PASS: item/fluid hysteresis, capped requests, legacy configs, zero stock,")
 print("adaptive polling, passive production, validation, retries, and config reloads")
+
+-- Exercise clipboard delivery during the real main loop's filtered key_down wait.
+-- No Enter key and no config-file timestamp change is involved.
+local bridgeListener, overrideText, pasted = nil, nil, false
+local realOpen, previousLoadfile = io.open, loadfile
+local memory = {}
+local fs = require("filesystem")
+fs.exists = function(p) return memory[p] ~= nil end
+fs.remove = function(p) memory[p] = nil; return true end
+fs.rename = function(a,b) memory[b],memory[a] = memory[a],nil; return true end
+io.open = function(p,mode)
+    if not p:find("nei_overrides.lua",1,true) then return realOpen(p,mode) end
+    memory[p] = ""
+    return {write=function(self,s) memory[p]=memory[p]..s; return self end, close=function() return true end}
+end
+loadfile = function(p)
+    if p == "nei_overrides.lua" then return memory[p] and load(memory[p],"=overrides","t",{}) or nil end
+    return previousLoadfile(p)
+end
+local ev = require("event")
+ev.listen = function(name,fn) assert(name == "clipboard"); bridgeListener = fn end
+local command = "LM2|D|I|Test"
+ev.pull = function(timeout)
+    now = now + timeout
+    if now >= stopAt then error("interrupted",0) end
+    if not pasted then pasted = true; bridgeListener("clipboard","keyboard",command,"Player") end
+end
+run({100,40},0,30)
+assert(#requests == 1, "clipboard delete must stop live maintenance without Enter")
+assert(assert(load(memory["nei_overrides.lua"],"=overrides","t",{}))().items.Test == false)
+pasted = false; command = "LM1|I|Test|100|150|40"
+run({100,40},0,30)
+assert(#requests == 2, "clipboard add must reactivate a removed base-config entry during idle")
+io.open, loadfile = realOpen, previousLoadfile
+print("PASS: live Maintainer clipboard remove/re-add while waiting, without Enter or manual reload")
