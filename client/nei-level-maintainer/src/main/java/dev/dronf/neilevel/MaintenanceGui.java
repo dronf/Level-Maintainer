@@ -13,6 +13,7 @@ public final class MaintenanceGui extends GuiScreen {
     private String initialName="",address,kind="I",feedback="";
     private GuiTextField screen,name,low,target,batch;
     private boolean removeArmed;
+    private FieldFocus input;
     public MaintenanceGui(ItemStack stack) {this(null,null,"");initialName=stack.func_82833_r();}
     public MaintenanceGui(ManagerGui parent,MaintainedEntry entry,String address) {
         this.parent=parent;this.entry=entry;this.address=address;
@@ -42,7 +43,9 @@ public final class MaintenanceGui extends GuiScreen {
         GuiButton type=new GuiButton(5,x+214,y+24,56,20,kind.equals("I")?"Item":"Fluid");
         type.field_146124_l=entry==null;field_146292_n.add(type);
         if(entry!=null && entry.target.isEmpty())feedback="Legacy entry: enter a Target to convert to Low/Target mode.";
-        screen.func_146195_b(true);Keyboard.enableRepeatEvents(true);
+        input=new FieldFocus(fields(),entry==null?new boolean[]{false,false,true,true,true}:new boolean[]{false,true,true,true});
+        input.focus(screen.func_146179_b().isEmpty()?(entry==null?1:0):(entry==null?2:1),true);
+        Keyboard.enableRepeatEvents(true);
     }
     private void back() {field_146297_k.func_147108_a(parent);}
     @Override protected void func_146284_a(GuiButton b) {
@@ -72,16 +75,13 @@ public final class MaintenanceGui extends GuiScreen {
     @Override protected void func_73869_a(char ch,int key) {
         if(key==Keyboard.KEY_ESCAPE){back();return;}
         if(key==Keyboard.KEY_RETURN||key==Keyboard.KEY_NUMPADENTER){func_146284_a(new GuiButton(1,0,0,"Save"));return;}
-        GuiTextField[] fs=fields();
         if(key==Keyboard.KEY_TAB) {
-            int active=0;for(int i=0;i<fs.length;i++)if(fs[i].func_146206_l())active=i;
-            int next=(active+(GuiScreen.func_146272_n()?fs.length-1:1))%fs.length;
-            for(int i=0;i<fs.length;i++)fs[i].func_146195_b(i==next);return;
+            input.next(GuiScreen.func_146272_n());return;
         }
-        for(GuiTextField f:fs)f.func_146201_a(ch,key);
+        input.key(ch,key);
         removeArmed=false;for(Object b:field_146292_n)if(((GuiButton)b).field_146127_k==3)((GuiButton)b).field_146126_j="Remove";
     }
-    @Override protected void func_73864_a(int x,int y,int b) {super.func_73864_a(x,y,b);for(GuiTextField f:fields())f.func_146192_a(x,y,b);}
+    @Override protected void func_73864_a(int x,int y,int b) {input.click(x,y,b);super.func_73864_a(x,y,b);}
     @Override public void func_146281_b() {Keyboard.enableRepeatEvents(false);}
     @Override public void func_73863_a(int mx,int my,float partial) {
         func_146276_q_();int x=field_146294_l/2-135,y=field_146295_m/2-110;

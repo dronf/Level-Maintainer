@@ -1,4 +1,4 @@
-# NEI Level Maintainer 1.1.0
+# NEI Level Maintainer 1.1.1
 
 Client-only Minecraft 1.7.10 addon for GTNH 2.9 RC2, NEI 2.8.155-GTNH and
 OpenComputers 1.12.64-GTNH. Includes an editor and a searchable, paginated manager
@@ -7,8 +7,19 @@ NEI overrides. No new server mod, network channel or external service is require
 
 ## Upgrade both sides
 
-1. Close Minecraft. Remove `nei-level-maintainer-1.0.0.jar` from the instance's
-   Mods list and add `nei-level-maintainer-1.1.0.jar`. Keep the pack's NEI and OC.
+1.1.1 corrects OpenOS save failures (`[NEI LM] Save failed: nil`). The receiver
+now explicitly flushes and accepts a nil close result without an error. Existing
+entries are preserved on genuine write, flush or close failures. The installer
+also handles OpenOS closes when refreshing settings. Update the scripts even
+if you keep the 1.1.0 client JAR; persistence requires this script correction.
+
+The 1.1.1 client also makes focus explicit, selects numeric values when entering
+a field, supports keypad scan codes without a character, and normalizes reversed
+selections to work around a vanilla length-limit replacement bug. Once the UUID
+is filled, Low is initially selected. Tab/Shift+Tab and Ctrl+A work in the editor.
+
+1. Close Minecraft. Remove older NEI Level Maintainer JARs from the instance's
+   Mods list and add `nei-level-maintainer-1.1.1.jar`. Keep the pack's NEI and OC.
 2. On the OC computer, stop Maintainer with Ctrl+Alt+C. Back up its directory.
    After the companion script PR is merged, run this from that directory:
 
@@ -17,7 +28,7 @@ wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installe
 ```
 
 The installer preserves existing configuration and overrides and reboots. Before
-that PR is merged, use the supplied `level-maintainer-oc-1.1.0.zip`: copy
+that PR is merged, use the supplied `level-maintainer-oc-1.1.1.zip`: copy
 `Maintainer.lua`, `nei_bridge.lua`, and `src/` into the existing installation,
 preserving `config.lua`, `settings.lua` and `nei_overrides.lua`. Then restart OC
 to clear Lua's cached modules. New installs also need the supplied configuration

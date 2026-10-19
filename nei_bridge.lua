@@ -50,9 +50,15 @@ local function save(data)
       assert(file:write("},"))
     end
     assert(file:write("}\n"))
+    -- OpenOS close() need not return true and can discard a flush error.
+    -- Flush explicitly while its return value can still be checked.
+    assert(file:flush())
   end)
-  local closed,closeErr=file:close()
-  if not ok or not closed then fs.remove(tmp); return false,why or closeErr end
+  local closeOK,closed,closeErr=pcall(file.close,file)
+  if not ok or not closeOK or closed==false or closeErr~=nil then
+    fs.remove(tmp)
+    return false,why or (not closeOK and closed) or closeErr or "close failed"
+  end
   local backup=path..".bak"
   if fs.exists(backup) then fs.remove(backup) end
   if fs.exists(path) then

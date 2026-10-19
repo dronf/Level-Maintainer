@@ -127,12 +127,16 @@ if oldSettings then
             -- Stage and close the replacement before moving the existing file.
             local staged = path("settings.lua.merged")
             local file, err = io.open(staged, "w")
-            local written, closed = nil, nil
+            local written = nil
             if file then
                 written, err = file:write(merged)
-                closed = file:close()
+                if written then written, err = file:flush() end
+                local closeOK, closed, closeErr = pcall(file.close, file)
+                if not closeOK or closed == false or closeErr ~= nil then
+                    written, err = nil, (not closeOK and closed) or closeErr or "close failed"
+                end
             end
-            if not written or not closed then
+            if not written then
                 filesystem.remove(staged)
                 print("Could not write refreshed settings: " .. tostring(err) .. ". Your file was kept.")
             else
