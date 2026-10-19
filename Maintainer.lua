@@ -524,7 +524,12 @@ require("nei_bridge").install(function()
     local cfg, err = readConfig()
     if not cfg then error(err) end
     applyConfig(cfg)
+end, function()
+    local cfg, err = readConfig()
+    if not cfg then error(err) end
+    return cfg
 end)
+display.clipboardOverlay = require("nei_bridge").paint
 
 -- Reloads config.lua and settings.lua if they were saved since they were last read.
 -- A file with a mistake is reported and the previous version stays in use.

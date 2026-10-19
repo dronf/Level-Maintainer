@@ -86,7 +86,7 @@ local function simulate(options)
         update()
         if now >= stop then error("interrupted", 0) end
     end} end
-    package.preload.filesystem = function() return {lastModified = function() return timestamp end} end
+    package.preload.filesystem = function() return {lastModified = function() return timestamp end, exists = function() return false end} end
     package.preload.shell = function() return {resolve = function(p) return p end} end
     package.preload["src.Display"] = function()
         return setmetatable({isActive = function() return false end}, {__index = function() return function() end end})

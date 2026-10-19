@@ -407,6 +407,7 @@ local function drawAll()
     end
     guarded(function()
         applyResolution()
+        if Display.clipboardOverlay and Display.clipboardOverlay(gpu) then return end
         local width, height = gpu.getResolution()
         gpu.fill(1, 1, width, height, " ")
         drawTable()
