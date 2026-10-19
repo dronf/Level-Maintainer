@@ -74,7 +74,7 @@ end
 
 -- Execute the actual main loop with a deterministic clock and mocked display.
 package.preload.event = function()
-    return {pull = function(timeout)
+    return {listen = function() end, pull = function(timeout)
         now = now + timeout
         if now >= stopAt then error("interrupted", 0) end
         if edit then

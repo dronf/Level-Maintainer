@@ -29,12 +29,14 @@ local function save(data)
   local file, err = io.open(tmp, "w")
   if not file then return false, err end
   file:write("return {items={\n")
+  -- Lua 5.2's %d can use a 32-bit C integer. Accepted quantities reach 10^12;
+  -- serialize them as exact decimal integers without narrowing through %d.
   for name, spec in pairs(data.items) do
-    file:write(string.format("[%q]={low=%d,target=%d,batch=%d},\n", name, spec.low, spec.target, spec.batch))
+    file:write(string.format("[%q]={low=%.0f,target=%.0f,batch=%.0f},\n", name, spec.low, spec.target, spec.batch))
   end
   file:write("},fluids={\n")
   for name, spec in pairs(data.fluids) do
-    file:write(string.format("[%q]={low=%d,target=%d,batch=%d},\n", name, spec.low, spec.target, spec.batch))
+    file:write(string.format("[%q]={low=%.0f,target=%.0f,batch=%.0f},\n", name, spec.low, spec.target, spec.batch))
   end
   file:write("}}\n")
   file:close()
