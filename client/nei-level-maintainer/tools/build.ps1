@@ -45,7 +45,21 @@ $inputArgs=@('-cp',"$classes;$tests;$classpath",'dev.dronf.neilevel.FieldFocusTe
 [IO.File]::WriteAllLines($inputArgsFile,@($inputArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$inputArgsFile"
 if ($LASTEXITCODE -ne 0) { throw 'Real Minecraft text-field input tests failed' }
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.1.jar'
+$editorArgsFile=Join-Path $project 'build/editor-test.args'
+$editorLibs=@($libs | Where-Object {$_ -notmatch '\\org\\lwjgl\\' -or $_ -match '\\2\.9\.4'})
+$editorClasspath=(@($classes,$tests,$MinecraftSrgJar,$ForgeJar,$nei,$oc)+$editorLibs)-join ';'
+$nativeDir=Join-Path $project 'build/natives'
+New-Item -ItemType Directory -Force $nativeDir | Out-Null
+$nativeJar=$libs | Where-Object {$_ -match 'lwjgl-platform.*2\.9\.4.*natives-windows'} | Select-Object -First 1
+if (!$nativeJar) {throw 'Minecraft LWJGL 2 Windows natives required for the editor regression test'}
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip=[IO.Compression.ZipFile]::OpenRead($nativeJar)
+try {foreach($entry in $zip.Entries){if($entry.Name -match '^lwjgl(64)?\.dll$'){[IO.Compression.ZipFileExtensions]::ExtractToFile($entry,(Join-Path $nativeDir $entry.Name),$true)}}} finally {$zip.Dispose()}
+$editorArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.dronf.neilevel.EditorInputTest',(Join-Path $project 'build'))
+[IO.File]::WriteAllLines($editorArgsFile,@($editorArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+& $java "@$editorArgsFile"
+if ($LASTEXITCODE -ne 0) { throw 'Real editor input / button rendering tests failed' }
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.3.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar

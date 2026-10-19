@@ -1,4 +1,4 @@
-# NEI Level Maintainer 1.1.1
+# NEI Level Maintainer 1.1.2
 
 Client-only Minecraft 1.7.10 addon for GTNH 2.9 RC2, NEI 2.8.155-GTNH and
 OpenComputers 1.12.64-GTNH. Includes an editor and a searchable, paginated manager
@@ -6,6 +6,21 @@ that reads the computer's real configuration, including base config entries and
 NEI overrides. No new server mod, network channel or external service is required.
 
 ## Upgrade both sides
+
+**1.1.2 is a client-only correction.** If the OC computer already has the PR #8
+save fix, replace only the client JAR and restart Minecraft. No new Lua files
+are needed. Numeric clicks now select the whole value even when that field was
+already focused; this includes the initially focused Low field. Previously a
+click there cleared selection and typed digits were inserted into the old value.
+Hover add and existing-entry edit use the same locked-name field layout.
+
+Release Ctrl+M before editing: hotkey opening is deferred until the old NEI input
+event has finished and the shortcut keys are released. Wide buttons now use
+solid rectangle drawing, avoiding the white center stripe caused by stretching
+Minecraft's vanilla 200-pixel button texture beyond its supported width.
+
+The following script-update instructions apply when upgrading an older OC
+installation; an already updated computer does not need another update for 1.1.2.
 
 1.1.1 corrects OpenOS save failures (`[NEI LM] Save failed: nil`). The receiver
 now explicitly flushes and accepts a nil close result without an error. Existing
@@ -19,7 +34,7 @@ selections to work around a vanilla length-limit replacement bug. Once the UUID
 is filled, Low is initially selected. Tab/Shift+Tab and Ctrl+A work in the editor.
 
 1. Close Minecraft. Remove older NEI Level Maintainer JARs from the instance's
-   Mods list and add `nei-level-maintainer-1.1.1.jar`. Keep the pack's NEI and OC.
+   Mods list and add `nei-level-maintainer-1.1.2.jar`. Keep the pack's NEI and OC.
 2. On the OC computer, stop Maintainer with Ctrl+Alt+C. Back up its directory.
    After the companion script PR is merged, run this from that directory:
 
