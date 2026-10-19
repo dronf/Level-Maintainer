@@ -1,7 +1,7 @@
 local shell = require("shell")
 local filesystem = require("filesystem")
 local component = require("component")
-local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "src/Settings.lua", "Maintainer.lua"}
+local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "src/Settings.lua", "nei_bridge.lua", "Maintainer.lua"}
 
 local repo = "https://raw.githubusercontent.com/dronf/Level-Maintainer/";
 local api = "https://api.github.com/repos/dronf/Level-Maintainer/commits/";
