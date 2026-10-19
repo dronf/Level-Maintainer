@@ -24,7 +24,7 @@ local me = {
     end,
     getCpus = function()
         cpuReads = cpuReads + 1
-        if onCycle then onCycle(cpuReads) end
+        if onCycle then onCycle(math.floor(now / 10) + 1) end
         return {{busy = false, name = "test"}}
     end
 }
@@ -112,7 +112,7 @@ local function run(conf, initial, duration, hook)
     assert(realLoadfile("Maintainer.lua"))()
 end
 run({100, 40}, 1000, 300)
-assert(stockReads == 1 and #requests == 0 and cpuReads == 30)
+assert(stockReads == 1 and #requests == 0 and cpuReads == 60)
 run({100, 40}, 110, 50)
 assert(stockReads == 3 and #requests == 0) -- t=0,20,40
 run({low = 100, target = 150, batch = 40}, 90, 30)
