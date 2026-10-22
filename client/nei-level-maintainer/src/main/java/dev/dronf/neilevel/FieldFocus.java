@@ -13,11 +13,17 @@ public final class FieldFocus {
         for(GuiTextField field:fields) {field.func_146184_c(true);field.func_146205_d(false);field.func_146195_b(false);}
     }
     public void focus(int index,boolean select) {
+        if(active!=index)TextInputBuffer.clear();
         active=index;
-        for(int i=0;i<fields.length;i++)if(fields[i].func_146206_l()!=(i==active))fields[i].func_146195_b(i==active);
+        // Blur the old field before focusing the new one. lwjgl3ify tracks a
+        // global field as well as vanilla's boolean; reassert the owner even
+        // when that boolean is already true.
+        for(int i=0;i<fields.length;i++)if(i!=active&&fields[i].func_146206_l())fields[i].func_146195_b(false);
+        if(active>=0)fields[active].func_146195_b(true);
         if(active>=0&&select&&replace[active])selectAll(fields[active]);
     }
     private static void selectAll(GuiTextField field) {field.func_146196_d();field.func_146199_i(field.func_146179_b().length());}
+    public void close() {for(GuiTextField field:fields)if(field.func_146206_l())field.func_146195_b(false);active=-1;TextInputBuffer.clear();}
     public void next(boolean reverse) {focus((active+(reverse?fields.length-1:1)+fields.length)%fields.length,true);}
     public void click(int x,int y,int button) {
         if(button!=0)return;
@@ -36,6 +42,7 @@ public final class FieldFocus {
     public void key(char ch,int key) {
         if(active<0)return;
         focus(active,false);
+        if(replace[active])TextInputBuffer.clear();
         if(ch==1) {selectAll(fields[active]);return;}
         // lwjgl3ify emits key=0 text events in addition to physical presses.
         // Numbers use physical keys only; accepting both would double each digit.

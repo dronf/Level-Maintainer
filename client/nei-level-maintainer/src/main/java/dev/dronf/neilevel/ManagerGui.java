@@ -8,7 +8,7 @@ import li.cil.oc.client.PacketSender;
 import java.util.*;
 import java.io.*;
 
-public final class ManagerGui extends GuiScreen {
+public final class ManagerGui extends MaintainerScreen {
     private GuiTextField screen,search;
     private FieldFocus input;
     private final List<MaintainedEntry> entries=new ArrayList<>(),incoming=new ArrayList<>();
@@ -21,6 +21,7 @@ public final class ManagerGui extends GuiScreen {
     public ManagerGui(String address) { this.address=address; }
     @Override public boolean func_73868_f() { return false; }
     @Override public void func_73866_w_() {
+        if(input!=null)input.close();beginInput();
         if(screen!=null)address=screen.func_146179_b();
         if(search!=null)filter=search.func_146179_b();
         if(address.isEmpty())try(FileInputStream in=new FileInputStream(new File(field_146297_k.field_71412_D,"config/nei-level-maintainer.properties"))) {
@@ -83,7 +84,7 @@ public final class ManagerGui extends GuiScreen {
                         try { ClipboardTransport.send(address,"LM2|END|"+token); }catch(Exception ignored) { }
                         rebuild();return;
                     }
-                    index++;sentAt=0;nextSend=now+100;status="Reading "+index+" / "+total+"...";
+                    index++;sentAt=0;nextSend=now;status="Reading "+index+" / "+total+"...";
                 }else if(now-sentAt>8000)throw new IllegalStateException("No reply. Update OC scripts, run Maintainer and open its screen once.");
             }
             if(sentAt==0 && now>=nextSend) {
@@ -143,5 +144,5 @@ public final class ManagerGui extends GuiScreen {
     @Override protected void func_73864_a(int x,int y,int b) {
         input.click(x,y,b);super.func_73864_a(x,y,b);
     }
-    @Override public void func_146281_b() {Keyboard.enableRepeatEvents(false);}
+    @Override public void func_146281_b() {if(input!=null)input.close();TextInputBuffer.clear();Keyboard.enableRepeatEvents(false);}
 }
