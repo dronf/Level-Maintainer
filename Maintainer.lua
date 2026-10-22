@@ -361,7 +361,7 @@ local function render(title)
     end
     local rows = {}
     for _, entry in ipairs(entries) do
-        local status = currentStatus[entry.name]
+        local status = entry.config.paused and "paused" or currentStatus[entry.name]
         local look = STATUS_TEXT[status] or {"waiting", "white"}
         table.insert(rows, {
             name = entry.name,
@@ -386,6 +386,7 @@ local function render(title)
     display.update(rows, title or headerParts(), KEY_HELP, KEY_HELP_SHORT, KEY_HELP_TINY)
 end
 
+-- Compare production settings separately so toggling pause retains active refill state.
 local function sameEntry(a, b)
     if type(a) ~= "table" or type(b) ~= "table" then
         return a == b
@@ -464,12 +465,15 @@ local function describeChanges(old, new)
     local function scan(oldBlock, newBlock)
         for name, conf in pairs(newBlock or {}) do
             local prev = oldBlock and oldBlock[name]
+            local differs = not sameEntry(prev, conf)
+                or (type(prev)=="table" and type(conf)=="table"
+                    and (prev.paused==true)~=(conf.paused==true))
             if not prev then
                 added = added + 1
-            elseif not sameEntry(prev, conf) then
+            elseif differs then
                 changed = changed + 1
             end
-            if not prev or not sameEntry(prev, conf) then
+            if not prev or differs then
                 currentStatus[name] = nil
                 lastLogged[name] = nil
                 retryAt[name] = nil

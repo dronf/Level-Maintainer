@@ -33,11 +33,13 @@ local function simulate(options)
     package.preload.computer=function()return {uptime=function()return now end}end
     package.preload.event=function()return {listen=function(_,fn)callback=fn end,ignore=function()end,pull=function(timeout)
         local command=commands[nextCommand]
+        local stop=options.stop or 12
+        local wake=command and math.min(command.time,now+timeout) or now+timeout
+        if wake>=stop then now=stop;finish();error("interrupted",0) end
         if command and command.time<=now+timeout then
             now=command.time;finish();nextCommand=nextCommand+1
             callback("clipboard","keyboard","LM2|P|"..(options.fluid and "F" or "I").."|Test|"..command.value,"Player")
         else now=now+timeout;finish() end
-        if now>=(options.stop or 12) then error("interrupted",0) end
     end}end
     package.preload.filesystem=function()return {lastModified=function()return 1 end,
         exists=function(p)return files[p]~=nil end,remove=function(p)files[p]=nil;return true end,
