@@ -11,8 +11,10 @@ public final class ScreenReply {
     public final MaintainedEntry entry;
     private ScreenReply(int index,int total,MaintainedEntry entry) { this.index=index; this.total=total; this.entry=entry; }
     public static ScreenReply parse(String text,String token,int expected) {
-        String marker="LM2R|"+token+"|";
+        String marker="LM3R|"+token+"|";
         int start=text.indexOf(marker);
+        boolean withPause=start>=0;
+        if(!withPause){marker="LM2R|"+token+"|";start=text.indexOf(marker);}
         if(start<0) return null;
         int end=text.indexOf("|END",start);
         if(end<0) return null;
@@ -29,13 +31,14 @@ public final class ScreenReply {
         if(index!=expected) return null;
         if(total<0 || total>10000 || index<0 || index>total) throw new IllegalArgumentException("Invalid list size.");
         if(index==0) return new ScreenReply(index,total,null);
-        if(p.length!=8 || (!p[2].equals("I")&&!p[2].equals("F"))) throw new IllegalArgumentException("Invalid entry reply.");
+        if(p.length!=(withPause?9:8) || (!p[2].equals("I")&&!p[2].equals("F"))) throw new IllegalArgumentException("Invalid entry reply.");
+        if(withPause&&!p[8].equals("0")&&!p[8].equals("1"))throw new IllegalArgumentException("Invalid pause state.");
         String name=decode(p[3]); BridgeCommand.name(name);
         for(int i=4;i<8;i++) if(!p[i].isEmpty()) {
             double n=Double.parseDouble(p[i]);
             if(!Double.isFinite(n) || n<0) throw new IllegalArgumentException("Invalid numeric reply.");
         }
-        return new ScreenReply(index,total,new MaintainedEntry(p[2],name,decimal(p[4]),decimal(p[5]),decimal(p[6]),decimal(p[7])));
+        return new ScreenReply(index,total,new MaintainedEntry(p[2],name,decimal(p[4]),decimal(p[5]),decimal(p[6]),decimal(p[7]),withPause&&p[8].equals("1")));
     }
     private static String decimal(String s) {return s.isEmpty()?s:new java.math.BigDecimal(s).stripTrailingZeros().toPlainString();}
     private static String decode(String hex) {

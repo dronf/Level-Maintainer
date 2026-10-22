@@ -42,6 +42,7 @@ local COLORS = {
     red = 0xFF5555,
     cyan = 0x55FFFF,
     blue = 0x55AAFF,
+    purple = 0xCC88FF,
 }
 
 local MAX_NAME_WIDTH = 50 -- so the numbers stay next to the names on wide screens

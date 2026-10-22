@@ -34,6 +34,16 @@ public final class ScreenReplyTest {
         check(BridgeCommand.update("F","Water","1","2","3").equals("LM1|F|Water|1|2|3"));
         reject(()->BridgeCommand.remove("I","Bad|Name"));
         reject(()->BridgeCommand.remove("X","Iron"));
+        String p3="LM3R|"+t+"|";
+        MaintainedEntry paused=ScreenReply.parse(frame(p3+"1|1|I|49726f6e|100|200|64|2|1|END"),t,1).entry;
+        check(paused.paused&&paused.summary().startsWith("[Paused]"));
+        check(!ScreenReply.parse(frame(p3+"1|1|F|5761746572|1|2|3||0|END"),t,1).entry.paused);
+        reject(()->ScreenReply.parse(frame(p3+"1|1|I|41|1|2|3||yes|END"),t,1));
+        reject(()->ScreenReply.parse(frame(p3+"1|1|I|41|1|2|3||END"),t,1));
+        check(BridgeCommand.pause("I","Iron",true).equals("LM2|P|I|Iron|1"));
+        check(BridgeCommand.pause("F","Water",false).equals("LM2|P|F|Water|0"));
+        reject(()->BridgeCommand.pause("X","Iron",true));
+        reject(()->BridgeCommand.pause("I","Bad|Name",true));
         if(args.length>0) {
             List<String> frames=Files.readAllLines(Paths.get(args[0]),StandardCharsets.UTF_8);
             check(frames.size()==5);
@@ -42,6 +52,15 @@ public final class ScreenReplyTest {
             }
             check(ScreenReply.parse(frames.get(1),t,1).entry.kind.equals("F"));
             check(ScreenReply.parse(frames.get(2),t,2).entry.name.equals("Caf\u00e9"));
+        }
+        if(args.length>1) {
+            List<String> frames=Files.readAllLines(Paths.get(args[1]),StandardCharsets.UTF_8);
+            check(frames.size()==5);int pausedCount=0;
+            for(int i=0;i<frames.size();i++) {
+                ScreenReply r=ScreenReply.parse(frames.get(i),t,i);check(r!=null&&r.total==4);
+                if(r.entry!=null&&r.entry.paused)pausedCount++;
+            }
+            check(pausedCount==3);
         }
         System.out.println("PASS: Screen reply / remove / fluid command checks: "+checks);
     }

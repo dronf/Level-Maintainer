@@ -37,10 +37,10 @@ public final class EditorInputTest {
         checks++;
     }
     private static final class DrawSpy extends FlatButton {
-        final List<int[]> boxes=new ArrayList<>();int labels;
+        final List<int[]> boxes=new ArrayList<>();int labels,lastColor;
         DrawSpy(int width){super(0,10,20,width,20,"Wide button");}
         @Override protected void rectangle(int l,int t,int r,int b,int color){boxes.add(new int[]{l,t,r,b,color});}
-        @Override protected void label(Minecraft mc,String s,int x,int y,int color){labels++;check(x==10+field_146120_f/2&&y==26);}
+        @Override protected void label(Minecraft mc,String s,int x,int y,int color){labels++;lastColor=color;check(x==10+field_146120_f/2&&y==26);}
     }
     public static void main(String[] args)throws Exception {
         for(int width:new int[]{56,86,200,270,304,480}){
@@ -50,6 +50,8 @@ public final class EditorInputTest {
             check(b.boxes.get(1)[4]!=0xffffffff);
             b.field_146125_m=false;b.func_146112_a(null,0,0);check(b.labels==1);
         }
+        DrawSpy pausedButton=new DrawSpy(270);pausedButton.textColor(0xcc88ff);pausedButton.func_146112_a(null,11,21);
+        check(pausedButton.lastColor==0xcc88ff);
         Minecraft mc=(Minecraft)allocate(Minecraft.class);
         Field singleton=Minecraft.class.getDeclaredField("field_71432_P");singleton.setAccessible(true);singleton.set(null,mc);
         mc.field_71466_p=(FontRenderer)allocate(FieldFocusTest.TestFont.class);
