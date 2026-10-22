@@ -11,6 +11,11 @@ local HISTORY = 200 -- log lines kept in memory
 Display.history = {}
 
 local gpu = nil
+local frame = nil -- GPU metadata/color state scoped to one guarded draw
+local function resolution()
+    if frame then return frame.width, frame.height end
+    return gpu.getResolution()
+end
 local active = false
 local suspended = false -- true while another program (edit) uses the screen
 local batching = false -- true while a cycle runs; the screen is redrawn once at its end
@@ -42,6 +47,7 @@ local COLORS = {
     red = 0xFF5555,
     cyan = 0x55FFFF,
     blue = 0x55AAFF,
+    purple = 0xCC88FF,
 }
 
 local MAX_NAME_WIDTH = 50 -- so the numbers stay next to the names on wide screens
@@ -120,7 +126,7 @@ local function areas(height)
 end
 
 local function layout()
-    local width, height = gpu.getResolution()
+    local width, height = resolution()
     local logLines, separatorY, tableRows = areas(height)
     return width, height, logLines, separatorY, tableRows
 end
@@ -146,10 +152,14 @@ end
 -- Returns a function that sets the text color (does nothing on a GPU without
 -- colors) and whether colors are available
 local function colorSetter()
-    local colors = gpu.getDepth() > 1
+    local colors = (frame and frame.depth or gpu.getDepth()) > 1
     return function(name)
         if colors then
-            gpu.setForeground(COLORS[name] or COLORS.white)
+            local value = COLORS[name] or COLORS.white
+            if not frame or frame.foreground ~= value then
+                gpu.setForeground(value)
+                if frame then frame.foreground = value end
+            end
         end
     end, colors
 end
@@ -209,9 +219,10 @@ local function fitResolution()
 end
 
 local function setResolution(width, height)
-    local currentWidth, currentHeight = gpu.getResolution()
+    local currentWidth, currentHeight = resolution()
     if width ~= currentWidth or height ~= currentHeight then
         gpu.setResolution(width, height)
+        if frame then frame.width, frame.height = width, height end
     end
 end
 
@@ -388,7 +399,12 @@ end
 -- Runs a drawing function. A problem while drawing must never stop the maintainer,
 -- so on an error the table is switched off and the log is printed normally instead.
 local function guarded(draw)
-    local ok, err = pcall(draw)
+    local ok, err = pcall(function()
+        local width, height = gpu.getResolution()
+        frame = {width = width, height = height, depth = gpu.getDepth()}
+        draw()
+    end)
+    frame = nil -- never retain a stale frame across resize, overlays or errors
     if not ok then
         failed = true
         failReason = tostring(err)
@@ -408,7 +424,7 @@ local function drawAll()
     guarded(function()
         applyResolution()
         if Display.clipboardOverlay and Display.clipboardOverlay(gpu) then return end
-        local width, height = gpu.getResolution()
+        local width, height = resolution()
         gpu.fill(1, 1, width, height, " ")
         drawTable()
         drawLog()

@@ -33,6 +33,9 @@ public final class BridgeCommand {
         return "LM1|" + kind + "|" + name + "|" + lo + "|" + ta + "|" + ba;
     }
     public static String remove(String kind, String name) { kind(kind); name(name); return "LM2|D|" + kind + "|" + name; }
+    public static String pause(String kind,String name,boolean paused) {
+        kind(kind);name(name);return "LM2|P|"+kind+"|"+name+"|"+(paused?"1":"0");
+    }
     private static void kind(String kind) { if (!"I".equals(kind) && !"F".equals(kind)) throw new IllegalArgumentException("Invalid entry type."); }
     private static long number(String input) {
         String s = input.trim();

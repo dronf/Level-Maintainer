@@ -22,10 +22,14 @@ public final class ClientProxy extends CommonProxy implements IContainerInputHan
         FMLCommonHandler.instance().bus().register(this);
     }
     @Override public boolean keyTyped(GuiContainer gui, char ch, int key) {
+        Minecraft mc = Minecraft.func_71410_x();
+        // A stale container callback must not send editor keys to NEI's search.
+        if(mc.field_71462_r instanceof MaintainerScreen) {
+            ((MaintainerScreen)mc.field_71462_r).acceptKey(ch,key);return true;
+        }
         if (key != Keyboard.KEY_M || !Keyboard.isKeyDown(Keyboard.KEY_LCONTROL)) return false;
         if (Keyboard.isRepeatEvent() || pending!=null) return true;
         ItemStack stack = GuiContainerManager.getStackMouseOver(gui);
-        Minecraft mc = Minecraft.func_71410_x(); // getMinecraft
         if (stack == null || Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)) {
             pending=new ManagerGui("");
         } else {

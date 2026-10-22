@@ -44,6 +44,7 @@ end
 local function buildSettings(userSettings, cfg)
     local s = {
         sleep = (cfg and cfg.sleep) or 10,
+        headerInterval = 5,
         retryDelay = 60,
         requireFreeCpu = true,
         cpuName = nil,
@@ -257,6 +258,12 @@ end
 -- Timed entries only get their shorter cadence after hysteresis has activated.
 -- Each deadline is measured from the completed check; overdue slots never queue up.
 local function maintain(name, config, request)
+    if config.paused then
+        local state=stockState[config]
+        if state then state.refillAt=nil;state.checkAt=nil end
+        skip(name,"paused",name .. " is paused.")
+        return
+    end
     local state = stockState[config]
     if config.refillInterval and state and state.refilling and state.refillAt
         and computer.uptime() < state.refillAt then
@@ -309,6 +316,7 @@ end
 
 -- Status text, color and the short text for settings.layout = "tall"
 local STATUS_TEXT = {
+    paused = {"paused", "purple"},
     crafting = {"crafting", "blue"},
     requested = {"requested", "yellow"},
     stocked = {"stocked", "green"},
@@ -353,7 +361,7 @@ local function render(title)
     end
     local rows = {}
     for _, entry in ipairs(entries) do
-        local status = currentStatus[entry.name]
+        local status = entry.config.paused and "paused" or currentStatus[entry.name]
         local look = STATUS_TEXT[status] or {"waiting", "white"}
         table.insert(rows, {
             name = entry.name,
@@ -378,6 +386,7 @@ local function render(title)
     display.update(rows, title or headerParts(), KEY_HELP, KEY_HELP_SHORT, KEY_HELP_TINY)
 end
 
+-- Compare production settings separately so toggling pause retains active refill state.
 local function sameEntry(a, b)
     if type(a) ~= "table" or type(b) ~= "table" then
         return a == b
@@ -400,6 +409,7 @@ local function entryProblem(name, conf)
     local function finite(n)
         return type(n) == "number" and n == n and n > -math.huge and n < math.huge
     end
+    if conf.paused~=nil and type(conf.paused)~="boolean" then return "paused must be true or false" end
     local low, batch = conf.low or conf[1], conf.batch or conf[2]
     if low ~= nil and (not finite(low) or low < 0) then
         return "the threshold/low must be a finite nonnegative number"
@@ -455,12 +465,15 @@ local function describeChanges(old, new)
     local function scan(oldBlock, newBlock)
         for name, conf in pairs(newBlock or {}) do
             local prev = oldBlock and oldBlock[name]
+            local differs = not sameEntry(prev, conf)
+                or (type(prev)=="table" and type(conf)=="table"
+                    and (prev.paused==true)~=(conf.paused==true))
             if not prev then
                 added = added + 1
-            elseif not sameEntry(prev, conf) then
+            elseif differs then
                 changed = changed + 1
             end
-            if not prev or not sameEntry(prev, conf) then
+            if not prev or differs then
                 currentStatus[name] = nil
                 lastLogged[name] = nil
                 retryAt[name] = nil
@@ -491,7 +504,13 @@ local function applyConfig(cfg)
             local previous = oldBlock and oldBlock[name]
             if previous and sameEntry(previous, conf) then
                 retainedState[conf] = stockState[previous]
+                if (previous.paused==true)~=(conf.paused==true) then
+                    local state=retainedState[conf]
+                    if state then state.checkAt=nil;state.refillAt=nil end
+                    currentStatus[name]=nil;lastLogged[name]=nil;retryAt[name]=nil
+                end
             end
+            if conf.paused then currentStatus[name]="paused" end
         end
     end
     retain(items, lastConfig and lastConfig.items)
@@ -524,6 +543,7 @@ require("nei_bridge").install(function()
     local cfg, err = readConfig()
     if not cfg then error(err) end
     applyConfig(cfg)
+    render() -- mutations, including Pause/Resume, are visible immediately
 end, function()
     local cfg, err = readConfig()
     if not cfg then error(err) end
@@ -589,11 +609,13 @@ local KEY_UP, KEY_DOWN, KEY_PAGE_UP, KEY_PAGE_DOWN = 0xC8, 0xD0, 0xC9, 0xD1
 -- Returns "edited" or "reload" when one of those keys was used, otherwise nil.
 local function idle(timeout)
     local deadline = computer.uptime() + timeout
+    local interval = tonumber(settings.headerInterval)
+    if not interval or interval ~= interval or interval <= 0 or interval == math.huge then interval = 5 end
     repeat
         local wait = math.max(0, deadline - computer.uptime())
         local countdown = nextCycleAt ~= nil and display.isActive()
         if countdown then
-            wait = math.min(wait, 1) -- wake every second to update "Next cycle in"
+            wait = math.min(wait, interval) -- cosmetic only; refill deadlines still win
         end
         local name, _, char, code = event.pull(wait, "key_down")
         if name == "key_down" then
@@ -632,7 +654,7 @@ local function waitForNextCycle()
         local wake = deadline
         for _, entry in ipairs(entries) do
             local state = stockState[entry.config]
-            if state and state.refillAt then wake = math.min(wake, state.refillAt) end
+            if not entry.config.paused and state and state.refillAt then wake = math.min(wake, state.refillAt) end
         end
         if (tonumber(settings.reloadCheck) or 0) > 0 then
             wake = math.min(wake, nextReloadCheck)
@@ -657,7 +679,7 @@ local function waitForNextCycle()
             local due = {}
             for _, entry in ipairs(entries) do
                 local state = stockState[entry.config]
-                if state and state.refillAt and state.refillAt <= computer.uptime() then
+                if not entry.config.paused and state and state.refillAt and state.refillAt <= computer.uptime() then
                     due[#due + 1] = entry
                 end
             end

@@ -7,7 +7,7 @@ import java.io.*;
 import java.util.Properties;
 
 /** Minecraft members use production SRG names. */
-public final class MaintenanceGui extends GuiScreen {
+public final class MaintenanceGui extends MaintainerScreen {
     private final ManagerGui parent;
     private final MaintainedEntry entry;
     private final boolean nameLocked;
@@ -31,6 +31,7 @@ public final class MaintenanceGui extends GuiScreen {
     }
     @Override public boolean func_73868_f() {return false;}
     @Override public void func_73866_w_() {
+        if(input!=null)input.close();beginInput();
         String priorLow=low==null?null:low.func_146179_b(),priorTarget=target==null?null:target.func_146179_b(),priorBatch=batch==null?null:batch.func_146179_b();
         if(screen!=null)address=screen.func_146179_b();if(name!=null)initialName=name.func_146179_b();
         Properties prefs=new Properties();
@@ -92,7 +93,7 @@ public final class MaintenanceGui extends GuiScreen {
         removeArmed=false;for(Object b:field_146292_n)if(((GuiButton)b).field_146127_k==3)((GuiButton)b).field_146126_j="Remove";
     }
     @Override protected void func_73864_a(int x,int y,int b) {input.click(x,y,b);super.func_73864_a(x,y,b);}
-    @Override public void func_146281_b() {Keyboard.enableRepeatEvents(false);}
+    @Override public void func_146281_b() {if(input!=null)input.close();TextInputBuffer.clear();Keyboard.enableRepeatEvents(false);}
     @Override public void func_73863_a(int mx,int my,float partial) {
         func_146276_q_();int x=field_146294_l/2-135,y=field_146295_m/2-110;
         func_73732_a(field_146289_q,"Level Maintainer - add / edit / remove",field_146294_l/2,y,0xffffff);

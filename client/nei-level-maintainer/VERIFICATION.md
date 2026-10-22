@@ -1,77 +1,77 @@
-# Version 1.1.2 verification — 2026-10-19
+# NEI Level Maintainer 1.2.0 verification
 
-Built `nei-level-maintainer-1.1.2.jar` with JDK 17 `javac --release 8` against
-the actual GTNH 2.9 RC2 binaries. All 12 addon classes use Java 8 class format 52.
-The JAR contains only addon classes, metadata and the manifest.
+Built with JDK 17 `javac --release 8` against the actual GTNH 2.9 RC2 binaries.
+Artifact: `nei-level-maintainer-1.2.0.jar`.
+SHA-256: `7f3c76870b379f1235514e0683b171f2df12f42807645af6ee8dd2fad6057ed4`.
 
-SHA-256: `6c7122928de2a76b9b3558fa86368e18a23b3f52e10af1aa29ffd74cd6025d76`
+## Binary compatibility
 
-| Dependency | Version | SHA-256 |
-| --- | --- | --- |
-| Forge universal | 1.7.10-10.13.4.1614 | `00d1ca02192c7efb87da95552ebf247021f1e1d642f86d0a03076314def11529` |
-| NEI | 2.8.155-GTNH | `2a3a2ae5a60ddd4a2a50ead5ea6a00896440ed22d6f313e1aca2aaf63498143d` |
-| OC | 1.12.64-GTNH | `f1fba20d2b76b61463dc1356aac1dc80f1054c3e22260b5232849228e9d1d404` |
+All 16 addon classes use Java 8 class format 52. The bytecode verifier resolves
+all 1,166 field/method references against actual Minecraft 1.7.10 SRG, Forge
+10.13.4.1614, NEI 2.8.155-GTNH, OC 1.12.64-GTNH and the pack libraries, including
+static/instance access. The JAR contains only addon classes, manifest and metadata.
+Dependencies are not redistributed. No custom server handler or external service
+is introduced; commands still use OC's existing clipboard transport and screen
+responses use its normally synchronized text buffer.
 
-Completed checks:
+## Passed tests
 
-- 47 additional checks execute the actual MaintenanceGui initialization, mouse
-  clicks, keyboard input and reinitialization using real Minecraft GUI classes.
-  Hover add, existing-entry edit and manual add all replace their previous Low,
-  Target and Batch values correctly. A typed 10/64/16 hover entry produces the
-  exact expected clipboard command, and values survive resolution changes.
-  The test also checks FlatButton drawing at widths from 56 through 480 pixels,
-  with rectangle/label drawing recorded instead of issuing OpenGL calls. Wide
-  fills remain inside the button bounds and do not sample a widget texture.
-  This reproduced the first-field click defect that isolated field tests missed.
+- 20 Java update-encoder checks; 41 reply/management checks when consuming real
+  Lua-generated LM2 and LM3 GPU frames, including paused flags and Unicode.
+- 12 checks exercising actual ManagerGui controls with transport recorded:
+  selection, Pause/Resume labels, item/fluid commands, purple rows, disabled
+  controls while syncing, explicit Remove, and refresh from authoritative state.
+  Its emitted pause/resume commands are consumed by the Lua receiver tests.
+- 74 real GuiTextField checks and 77 editor/render checks; 80 editor/render
+  checks with the installed lwjgl3ify 3.0.37 shared input buffer. The dedicated
+  shared-buffer leak regression also passes. Fonts/drawing are stubbed for these
+  headless tests; Minecraft's storage, cursor, focus and insertion code is real.
+- 38 Lua manager checks: LM2 compatibility, LM3 paused snapshots, pause/resume,
+  restart persistence, legacy continuous entries, quantity/type edits preserving
+  pause and fluid/refill metadata, tombstones, invalid flags, unknown entries,
+  write/rename failures, expiry and corrupt-file protection.
+- 41 real Maintainer/AE2-loop pause checks with deterministic components:
+  items and fluids, immediate/completing jobs, no stock queries while paused,
+  immediate dashboard status/color, resume of an active refill above Low,
+  capped final batch, persistence and unchanged CPU query cadence.
+- 23 existing PR #5 receiver checks and 11 checks with the unmodified OpenOS
+  buffered I/O extracted from OC 1.12.64-GTNH, including paused saves and
+  explicit flush/close failures.
+- Existing maintenance, refill-interval, display, settings, installer and utility
+  suites pass. The real display test verifies purple `0xCC88FF` and `paused` text.
+- Rendering matches the pre-optimization renderer in 20 layout/depth/page cases.
+  A 23-row draw uses 2 metadata queries instead of 8. Header cadence tests confirm
+  maintenance and scheduled refill timing are unchanged. These component-call
+  counts are not a measurement of server MSPT.
+- ZIP CRCs, Java class versions, JAR metadata and package contents verified.
 
-- Reproduced the exact `[NEI LM] Save failed: nil` failure against the pre-fix
-  receiver using the unmodified OpenOS buffer implementation extracted from the
-  installed OC JAR. The fixed receiver passes all 9 regression checks, including
-  successful nil-return closes, real buffered flush failure, close error,
-  preservation of existing data, removal and re-addition.
-- 27 input checks using real Minecraft GuiTextField instances passed. Font
-  metrics were stubbed to avoid OpenGL; Minecraft text storage, selection,
-  insertion, cursor and focus methods were executed unchanged. Coverage includes
-  mouse and Tab focus, replacement, keypad input, reversed selections at the
-  length limit, Ctrl+A and recovery from lost focus. Whole-game GUI integration
-  remains untested.
+## Reproduce
 
-- Java compilation against exact pack dependencies; production SRG names used
-  directly, including all overridden GUI methods.
-- JVM loading with `-Xverify:all`, metadata/namespace checks and common entrypoint
-  initialization. All 1002 field/method references resolved against real Minecraft,
-  Forge, OC, NEI and pack libraries, including static/instance access.
-- 20 Java update-command checks: wire format, UUIDs, numeric validation, UTF-8
-  name length and disallowed delimiters/control characters.
-- 26 Java management protocol checks, including parsing GPU frames generated by
-  the real Lua receiver, Unicode, legacy entries, fluids, numeric normalization,
-  malformed replies, stale nonces/indices, partial frames and checksum rejection.
-- Lua 5.2 management tests: query snapshots, screen wrapping, expiry, wrong
-  tokens, small screens, deletion markers, restart persistence, re-addition,
-  preservation of fluid identity/refill timing, invalid commands, write/rename
-  failures, corrupted override protection and concurrent base-config changes.
-- Existing receiver tests passed with commands emitted by the Java encoder.
-- Actual Maintainer main-loop tests passed for removing and re-adding an entry
-  while it waits for events, without Enter, a file timestamp change or manual R.
-- Existing maintenance, refill-interval, installer, settings and display suites
-  passed. Installer still supplies all updated scripts and preserves user config.
-- Archive CRC checks and production JAR contents/class-version checks passed.
+Use the client README's PowerShell build/verify commands with your pack binaries.
+From the repository root with Lua 5.2+:
 
-New OC API calls were compiled and linked against OC 1.12.64-GTNH:
-`ComponentTracker.get(World,String)`, `PacketSender.sendTextBufferInit(String)`,
-`TextBuffer.data()`, and `li.cil.oc.util.TextBuffer.width()/height()/get(int,int)`.
-These read the screen that OC normally synchronizes; requests still use
-`PacketSender.sendClipboard(String,String)` with its existing cooldown and length
-checks. No custom server packet handler or external service is introduced.
+```sh
+lua tests/pause.lua
+lua tests/maintenance.lua
+lua tests/refill-interval.lua
+lua tests/nei-bridge.lua
+lua tests/nei-manager.lua frames.txt pause-frames.txt client/nei-level-maintainer/build/pause-commands.txt
+lua tests/display.lua
+lua tests/settings.lua
+lua tests/installer.lua
+lua tests/utility.lua
+python tests/extract-openos.py /path/to/OpenComputers-1.12.64-GTNH.jar /tmp/openos-lib
+lua tests/nei-openos-io.lua /tmp/openos-lib
+```
 
-The listing session encodes one record per reply, validates nonce/index/Adler-32
-checksum on the client, and preserves a frozen view while paging. Deletions use
-false markers in the existing override sections, so base entries stay suppressed
-without rewriting config.lua. Existing LM1 updates remain compatible with the
-new receiver. The new list/remove features require the updated receiver.
+Then run Java's ScreenReplyTest with the two emitted frame files. The optional
+third Lua manager argument consumes commands emitted by ManagerPauseTest during
+the client build. Omit that argument when running the Lua tests independently.
 
-Verification boundary: OpenOS/AE2/GPU interactions are simulated in tests, while
-the receiver, serializer, dashboard hook, Java parser and Maintainer loop under
-test are real implementations. The new GUI and actual network/screen-sync path
-have not been tested inside a running Minecraft session. Follow README.md's
-gameplay acceptance test before relying on it for production quantities.
+## Verification boundary
+
+The production receiver, serializer, manager controls, parser and Maintainer
+loop are tested; OC/AE2/GPU interactions are simulated. Full modpack mixin
+transformation, physical keyboard input and real network/screen synchronization
+have not been tested in a running Minecraft session. Follow the installation
+document's in-game acceptance test for those paths.

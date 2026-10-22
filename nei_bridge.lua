@@ -42,6 +42,10 @@ local function save(data)
             assert(finite(value),"invalid override number")
             assert(file:write(string.format("%s=%.17g,",key,value)))
           end
+          if spec.paused~=nil then
+            assert(type(spec.paused)=="boolean","invalid pause flag")
+            assert(file:write("paused="..tostring(spec.paused)..","))
+          end
           local fluidName=spec.fluidName or spec[3]
           if fluidName then assert(file:write(string.format("fluidName=%q,",fluidName))) end
           assert(file:write("},\n"))
@@ -76,14 +80,15 @@ local function frame(body)
   for i=1,#body do a=(a+body:byte(i))%65521; b=(b+a)%65521 end
   return body.."|"..string.format("%04x%04x",b,a).."|END"
 end
-local function snapshot(cfg)
+local function snapshot(cfg,withPause)
   local rows={}
   for _,section in ipairs({"items","fluids"}) do
     for name,spec in pairs(cfg[section] or {}) do
       if nameOK(name) and type(spec)=="table" then
-        rows[#rows+1]={kind=section=="items" and "I" or "F",name=name,
-          wire=table.concat({section=="items" and "I" or "F",hex(name),number(spec.low or spec[1]),
-            number(spec.target),number(spec.batch or spec[2]),number(spec.refillInterval)},"|")}
+        local fields={section=="items" and "I" or "F",hex(name),number(spec.low or spec[1]),
+            number(spec.target),number(spec.batch or spec[2]),number(spec.refillInterval)}
+        if withPause then fields[#fields+1]=spec.paused==true and "1" or "0" end
+        rows[#rows+1]={kind=fields[1],name=name,wire=table.concat(fields,"|")}
       end
     end
   end
@@ -106,19 +111,19 @@ function M.install(reload,getConfig)
   M.uninstall()
   M.listener=function(_,keyboard,message,player)
     if type(message)~="string" then return end
-    if message:sub(1,4)=="LM2|" then
-      local token,screen,index=message:match("^LM2|Q|(%x+)|([%x%-]+)|(%d+)$")
+    if message:sub(1,4)=="LM2|" or message:sub(1,4)=="LM3|" then
+      local version,token,screen,index=message:match("^LM([23])|Q|(%x+)|([%x%-]+)|(%d+)$")
       if token and #token==16 and #screen==36 and getConfig then
         index=tonumber(index)
         if index==0 then
           local ok,cfg=pcall(getConfig)
           if not ok or type(cfg)~="table" then return end
-          session={token=token,screen=screen,rows=snapshot(cfg)}
+          session={token=token,screen=screen,version=version,rows=snapshot(cfg,version=="3")}
         end
-        if session and session.token==token and session.screen==screen and index<=#session.rows then
+        if session and session.token==token and session.screen==screen and session.version==version and index<=#session.rows then
           session.untilTime=now()+5
           local row=index>0 and session.rows[index]
-          session.frame=frame("LM2R|"..token.."|"..index.."|"..#session.rows.."|"..(row and row.wire or ""))
+          session.frame=frame("LM"..version.."R|"..token.."|"..index.."|"..#session.rows.."|"..(row and row.wire or ""))
           pcall(function() M.paint(require("component").gpu) end)
         end
         return
@@ -129,12 +134,15 @@ function M.install(reload,getConfig)
     local kind,name,low,target,batch=message:match("^LM1|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")
     local previousKind,newKind,newName,newLow,newTarget,newBatch=message:match("^LM2|T|([IF])|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")
     if previousKind then kind,name,low,target,batch=newKind,newName,newLow,newTarget,newBatch end
+    local pauseKind,pauseName,pauseValue=message:match("^LM2|P|([IF])|([^|]+)|([01])$")
+    local pausing=pauseKind~=nil
     local deleteKind,deleteName=message:match("^LM2|D|([IF])|([^|]+)$")
     local deleting=deleteKind~=nil
     if deleting then kind,name=deleteKind,deleteName end
-    if message:sub(1,4)~="LM1|" and not deleting and not previousKind then return end
+    if pausing then kind,name=pauseKind,pauseName end
+    if message:sub(1,4)~="LM1|" and not deleting and not previousKind and not pausing then return end
     low,target,batch=tonumber(low),tonumber(target),tonumber(batch)
-    if not kind or not nameOK(name) or (not deleting and
+    if not kind or not nameOK(name) or (not deleting and not pausing and
       (not low or not target or not batch or low>target or batch<1 or target>1e12 or batch>1e12
         or low~=math.floor(low) or target~=math.floor(target) or batch~=math.floor(batch))) then
       print("[NEI LM] Rejected invalid request from "..tostring(player)); return
@@ -142,13 +150,23 @@ function M.install(reload,getConfig)
     local data,err=read()
     if not data then print("[NEI LM] "..tostring(err)); return end
     local section=kind=="I" and "items" or "fluids"
+    local oldSection=previousKind and (previousKind=="I" and "items" or "fluids") or section
+    local old=data[oldSection][name]
+    if getConfig then
+      local ok,cfg=pcall(getConfig)
+      if not ok then print("[NEI LM] Cannot read current configuration"); return end
+      old=cfg and cfg[oldSection] and cfg[oldSection][name]
+    end
     if deleting then data[section][name]=false
+    elseif pausing then
+      if type(old)~="table" then print("[NEI LM] Entry no longer exists: "..name); return end
+      local spec={}; for key,value in pairs(old) do spec[key]=value end
+      spec.paused=pauseValue=="1"
+      data[section][name]=spec
     else
       local spec={low=low,target=target,batch=batch}
-      if getConfig then
-        local ok,cfg=pcall(getConfig)
-        local old=ok and cfg and cfg[section] and cfg[section][name]
-        if type(old)=="table" then spec.refillInterval=old.refillInterval; spec.fluidName=old.fluidName or old[3] end
+      if type(old)=="table" then
+        spec.refillInterval=old.refillInterval; spec.fluidName=old.fluidName or old[3]; spec.paused=old.paused
       end
       data[section][name]=spec
     end
@@ -157,7 +175,7 @@ function M.install(reload,getConfig)
     if not ok then print("[NEI LM] Save failed: "..tostring(why)); return end
     session=nil
     local applied,reason=pcall(reload)
-    if applied then print("[NEI LM] "..(deleting and "Removed " or "Updated ")..name)
+    if applied then print("[NEI LM] "..(deleting and "Removed " or pausing and (pauseValue=="1" and "Paused " or "Resumed ") or "Updated ")..name)
     else print("[NEI LM] Reload failed: "..tostring(reason)) end
   end
   event.listen("clipboard",M.listener)

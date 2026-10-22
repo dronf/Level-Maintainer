@@ -1,25 +1,39 @@
 local filesystem = require("filesystem")
+local computer = require("computer")
 
 local timeOffset = 0 -- seconds added to UTC for log timestamps
 local CLOCK_FILE = "/tmp/.maintainer_clock"
+local CLOCK_SYNC = 60
+local clockEpoch, clockUptime, nextClockSync, lastUptime = nil, nil, 0, nil
 
 function setTimeOffset(hours)
     timeOffset = (tonumber(hours) or 0) * 3600
 end
 
--- OC has no real-time clock and os.date() uses in-game time. Opening a file
--- for writing stamps it with the server's real clock (UTC), so touch one in
--- /tmp and format its modification time instead.
+-- Anchor to the server filesystem clock, then advance using uptime. Touch the
+-- file at most once a minute, rather than for every header or log timestamp.
 local function timestamp()
-    local file = io.open(CLOCK_FILE, "w")
-    if file then
-        file:close()
-        local modified = filesystem.lastModified(CLOCK_FILE)
-        if modified and modified > 0 then
-            return os.date("%H:%M:%S", modified / 1000 + timeOffset)
+    local now = computer.uptime()
+    if lastUptime and now < lastUptime then
+        clockEpoch, clockUptime, nextClockSync = nil, nil, 0
+    end
+    lastUptime = now
+    if now >= nextClockSync then
+        nextClockSync = now + CLOCK_SYNC
+        local ok, modified = pcall(function()
+            local file = io.open(CLOCK_FILE, "w")
+            if not file then return nil end
+            file:close()
+            return filesystem.lastModified(CLOCK_FILE)
+        end)
+        if ok and type(modified) == "number" and modified > 0 then
+            clockEpoch, clockUptime = modified / 1000, now
         end
     end
-    return os.date("%H:%M:%S") -- in-game time as a fallback
+    if clockEpoch then
+        return os.date("%H:%M:%S", math.floor(clockEpoch + now - clockUptime + timeOffset))
+    end
+    return os.date("%H:%M:%S") -- in-game time if the real clock is unavailable
 end
 
 -- Current real time as HH:MM:SS

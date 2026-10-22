@@ -8,7 +8,7 @@ import li.cil.oc.client.PacketSender;
 import java.util.*;
 import java.io.*;
 
-public final class ManagerGui extends GuiScreen {
+public final class ManagerGui extends MaintainerScreen {
     private GuiTextField screen,search;
     private FieldFocus input;
     private final List<MaintainedEntry> entries=new ArrayList<>(),incoming=new ArrayList<>();
@@ -18,9 +18,16 @@ public final class ManagerGui extends GuiScreen {
     private long sentAt,nextSend;
     private boolean syncing,removeArmed;
     private int listWidth,left,rows;
-    public ManagerGui(String address) { this.address=address; }
+    interface Channel {void send(String address,String message);void initialize(String address);}
+    private final Channel channel;
+    public ManagerGui(String address) {this(address,new Channel(){
+        public void send(String a,String m){ClipboardTransport.send(a,m);}
+        public void initialize(String a){PacketSender.sendTextBufferInit(a);}
+    });}
+    ManagerGui(String address,Channel channel){this.address=address;this.channel=channel;}
     @Override public boolean func_73868_f() { return false; }
     @Override public void func_73866_w_() {
+        if(input!=null)input.close();beginInput();
         if(screen!=null)address=screen.func_146179_b();
         if(search!=null)filter=search.func_146179_b();
         if(address.isEmpty())try(FileInputStream in=new FileInputStream(new File(field_146297_k.field_71412_D,"config/nei-level-maintainer.properties"))) {
@@ -39,20 +46,24 @@ public final class ManagerGui extends GuiScreen {
         field_146292_n.clear();
         field_146292_n.add(new FlatButton(1,left+listWidth-68,27,68,20,"Refresh"));
         visible=new ArrayList<>();
-        for(MaintainedEntry e:entries)if((e.name+" "+e.kind).toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))visible.add(e);
+        for(MaintainedEntry e:entries)if((e.name+" "+e.kind+(e.paused?" paused":"")).toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))visible.add(e);
         page=Math.max(0,Math.min(page,Math.max(0,(visible.size()-1)/rows)));
         for(int r=0;r<rows;r++) {
             int at=page*rows+r;if(at>=visible.size())break;
             String label=(selected==at?"> ":"")+visible.get(at).summary();
-            field_146292_n.add(new FlatButton(100+r,left,77+r*21,listWidth,20,field_146289_q.func_78269_a(label,listWidth-10)));
+            FlatButton row=new FlatButton(100+r,left,77+r*21,listWidth,20,field_146289_q.func_78269_a(label,listWidth-10));
+            if(visible.get(at).paused)row.textColor(0xcc88ff);
+            field_146292_n.add(row);
         }
-        int y=field_146295_m-66,bw=(listWidth-12)/5;
-        String[] labels={"Add","Edit",removeArmed?"Confirm?":"Remove","Prev","Next"};
-        for(int i=0;i<5;i++) {
-            GuiButton b=new FlatButton(2+i,left+i*(bw+3),y,bw,20,labels[i]);
-            b.field_146124_l=!syncing && (i!=1&&i!=2 || selected>=0&&selected<visible.size());
-            if(i==3)b.field_146124_l=!syncing&&page>0;
-            if(i==4)b.field_146124_l=!syncing&&(page+1)*rows<visible.size();
+        int y=field_146295_m-66,bw=(listWidth-15)/6;
+        boolean hasSelection=selected>=0&&selected<visible.size();
+        String[] labels={"Add","Edit",hasSelection&&visible.get(selected).paused?"Resume":"Pause",removeArmed?"Confirm?":"Remove","Prev","Next"};
+        int[] ids={2,3,8,4,5,6};
+        for(int i=0;i<ids.length;i++) {
+            GuiButton b=new FlatButton(ids[i],left+i*(bw+3),y,bw,20,labels[i]);
+            b.field_146124_l=!syncing&&(ids[i]==2||hasSelection);
+            if(ids[i]==5)b.field_146124_l=!syncing&&page>0;
+            if(ids[i]==6)b.field_146124_l=!syncing&&(page+1)*rows<visible.size();
             field_146292_n.add(b);
         }
         field_146292_n.add(new FlatButton(7,left,field_146295_m-24,listWidth,20,"Done"));
@@ -63,7 +74,7 @@ public final class ManagerGui extends GuiScreen {
             token=UUID.randomUUID().toString().replace("-","").substring(0,16);
             incoming.clear();index=0;total=-1;syncing=true;sentAt=0;nextSend=System.currentTimeMillis()+150;
             selected=-1;removeArmed=false;status="Reading actual OC configuration...";
-            PacketSender.sendTextBufferInit(address);rebuild();
+            channel.initialize(address);rebuild();
         }catch(Exception ex) { status="Error: "+ex.getMessage(); }
     }
     @Override public void func_73876_c() {
@@ -80,18 +91,18 @@ public final class ManagerGui extends GuiScreen {
                     if(index==total) {
                         entries.clear();entries.addAll(incoming);syncing=false;
                         status="Loaded "+entries.size()+" entries from OC.";
-                        try { ClipboardTransport.send(address,"LM2|END|"+token); }catch(Exception ignored) { }
+                        try { channel.send(address,"LM2|END|"+token); }catch(Exception ignored) { }
                         rebuild();return;
                     }
-                    index++;sentAt=0;nextSend=now+100;status="Reading "+index+" / "+total+"...";
+                    index++;sentAt=0;nextSend=now;status="Reading "+index+" / "+total+"...";
                 }else if(now-sentAt>8000)throw new IllegalStateException("No reply. Update OC scripts, run Maintainer and open its screen once.");
             }
             if(sentAt==0 && now>=nextSend) {
-                try { ClipboardTransport.send(address,"LM2|Q|"+token+"|"+address+"|"+index);sentAt=now; }
+                try { channel.send(address,"LM3|Q|"+token+"|"+address+"|"+index);sentAt=now; }
                 catch(IllegalStateException cooldown) { nextSend=now+100; }
             } else if(sentAt>0 && now>=nextSend && now-sentAt>1000) {
                 // Reissue the same page if a dashboard redraw or network update hid it.
-                try { ClipboardTransport.send(address,"LM2|Q|"+token+"|"+address+"|"+index); }catch(IllegalStateException ignored) { }
+                try { channel.send(address,"LM3|Q|"+token+"|"+address+"|"+index); }catch(IllegalStateException ignored) { }
                 nextSend=now+1000;
             }
         }catch(Exception ex) { syncing=false;status="Sync failed: "+ex.getMessage();rebuild(); }
@@ -105,12 +116,21 @@ public final class ManagerGui extends GuiScreen {
         address=screen.func_146179_b();
         if(id==2)field_146297_k.func_147108_a(new MaintenanceGui(this,null,address));
         if(id==3 && selected>=0 && selected<visible.size())field_146297_k.func_147108_a(new MaintenanceGui(this,visible.get(selected),address));
+        if(id==8 && selected>=0 && selected<visible.size()) {
+            try {
+                MaintainedEntry entry=visible.get(selected);
+                address=BridgeCommand.address(screen.func_146179_b());
+                channel.send(address,BridgeCommand.pause(entry.kind,entry.name,!entry.paused));
+                refresh();
+            }catch(Exception ex){status="Error: "+ex.getMessage();}
+            return;
+        }
         if(id==4 && selected>=0 && selected<visible.size()) {
             if(!removeArmed) {removeArmed=true;status="Click Confirm? to stop maintaining this entry (including base config).";rebuild();return;}
             try {
                 MaintainedEntry entry=visible.get(selected);
                 address=BridgeCommand.address(screen.func_146179_b());
-                ClipboardTransport.send(address,BridgeCommand.remove(entry.kind,entry.name));
+                channel.send(address,BridgeCommand.remove(entry.kind,entry.name));
                 refresh();
             }catch(Exception ex) {status="Error: "+ex.getMessage();}
         }
@@ -143,5 +163,5 @@ public final class ManagerGui extends GuiScreen {
     @Override protected void func_73864_a(int x,int y,int b) {
         input.click(x,y,b);super.func_73864_a(x,y,b);
     }
-    @Override public void func_146281_b() {Keyboard.enableRepeatEvents(false);}
+    @Override public void func_146281_b() {if(input!=null)input.close();TextInputBuffer.clear();Keyboard.enableRepeatEvents(false);}
 }

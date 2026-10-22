@@ -65,8 +65,44 @@ send("LM1|I|Iron|110|250|32")
 check(config().items.Iron.refillInterval==1.5 and config().items.Iron.batch==32)
 send("LM1|F|Water|10|20|4")
 check(config().fluids.Water.fluidName=="water" and config().fluids.Water.refillInterval==2.5)
+-- Pause is a metadata change: keep all quantities, legacy mode and fluid identity.
+send("LM2|P|I|Iron|1")
+check(config().items.Iron.paused==true and config().items.Iron.target==250 and config().items.Iron.refillInterval==1.5)
+send("LM2|P|F|Water|1")
+check(config().fluids.Water.paused==true and config().fluids.Water.fluidName=="water")
+if arg and arg[3] then
+  for command in io.lines(arg[3]) do send(command) end
+  check(config().items.Iron.paused==true and config().fluids.Water.paused==false)
+  send("LM2|P|F|Water|1")
+end
+send("LM2|P|I|Legacy|1")
+check(config().items.Legacy.paused==true and config().items.Legacy.low==nil and config().items.Legacy.target==nil and config().items.Legacy.batch==64)
+local resumed=assert(realLoadfile("nei_bridge.lua"))().merge(base())
+check(resumed.items.Iron.paused and resumed.items.Legacy.paused and resumed.fluids.Water.paused)
+local function query3(i)
+  send("LM3|Q|"..token.."|"..screen.."|"..i)
+  return table.concat(pixels):gsub(" +$","")
+end
+local pausedFrames={(query3(0))}
+for i=1,4 do pausedFrames[#pausedFrames+1]=query3(i) end
+check(pausedFrames[2]:find("|2.5|1|",1,true)~=nil)
+if arg and arg[2] then local f=assert(realOpen(arg[2],"w"));f:write(table.concat(pausedFrames,"\n").."\n");f:close() end
+check(query(0):find("LM2R|",1,true)~=nil) -- older clients keep their original schema
+send("LM2|P|I|Iron|0");check(config().items.Iron.paused==false and config().items.Iron.batch==32)
+send("LM2|P|I|Iron|1");send("LM1|I|Iron|110|250|32")
+check(config().items.Iron.paused==true, "editing amounts must not unpause")
+send("LM2|T|I|F|Iron|110|250|32")
+check(config().items.Iron==nil and config().fluids.Iron.paused==true)
+send("LM2|T|F|I|Iron|110|250|32")
+check(config().items.Iron.paused==true and config().fluids.Iron==nil)
+local saved,priorReloads=files[path],reloads
+send("LM2|P|I|Missing|1");send("LM2|P|I|Iron|2");send("LM2|P|X|Iron|1")
+check(files[path]==saved and reloads==priorReloads)
+failRename=true;send("LM2|P|I|Iron|0");check(files[path]==saved and reloads==priorReloads)
+failRename=false;failWrite=true;send("LM2|P|I|Iron|0");check(files[path]==saved and reloads==priorReloads)
+failWrite=false
 send("LM2|D|I|Iron")
-check(config().items.Iron==nil and config().items.Legacy[2]==64)
+check(config().items.Iron==nil and (config().items.Legacy.batch or config().items.Legacy[2])==64)
 check(assert(load(files[path],"=saved","t",{}))().items.Iron==false)
 local restarted=assert(realLoadfile("nei_bridge.lua"))()
 check(restarted.merge(base()).items.Iron==nil)

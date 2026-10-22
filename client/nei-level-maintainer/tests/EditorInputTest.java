@@ -12,6 +12,10 @@ public final class EditorInputTest {
     public static final class TestItem extends Item {
         @Override public String func_77653_i(ItemStack stack){return "New Test Item";}
     }
+    public static final class TestNeiField extends codechicken.nei.TextField {
+        private TestNeiField(){super("test");}
+        @Override public void onTextChange(String before) { }
+    }
     private static int checks;
     private static void check(boolean b){checks++;if(!b)throw new AssertionError("editor check "+checks);}
     private static Object allocate(Class<?> type)throws Exception{
@@ -33,10 +37,10 @@ public final class EditorInputTest {
         checks++;
     }
     private static final class DrawSpy extends FlatButton {
-        final List<int[]> boxes=new ArrayList<>();int labels;
+        final List<int[]> boxes=new ArrayList<>();int labels,lastColor;
         DrawSpy(int width){super(0,10,20,width,20,"Wide button");}
         @Override protected void rectangle(int l,int t,int r,int b,int color){boxes.add(new int[]{l,t,r,b,color});}
-        @Override protected void label(Minecraft mc,String s,int x,int y,int color){labels++;check(x==10+field_146120_f/2&&y==26);}
+        @Override protected void label(Minecraft mc,String s,int x,int y,int color){labels++;lastColor=color;check(x==10+field_146120_f/2&&y==26);}
     }
     public static void main(String[] args)throws Exception {
         for(int width:new int[]{56,86,200,270,304,480}){
@@ -46,7 +50,10 @@ public final class EditorInputTest {
             check(b.boxes.get(1)[4]!=0xffffffff);
             b.field_146125_m=false;b.func_146112_a(null,0,0);check(b.labels==1);
         }
+        DrawSpy pausedButton=new DrawSpy(270);pausedButton.textColor(0xcc88ff);pausedButton.func_146112_a(null,11,21);
+        check(pausedButton.lastColor==0xcc88ff);
         Minecraft mc=(Minecraft)allocate(Minecraft.class);
+        Field singleton=Minecraft.class.getDeclaredField("field_71432_P");singleton.setAccessible(true);singleton.set(null,mc);
         mc.field_71466_p=(FontRenderer)allocate(FieldFocusTest.TestFont.class);
         File root=new File(args[0],"editor-regression");new File(root,"config").mkdirs();
         Field dataDir=Minecraft.class.getDeclaredField("field_71412_D");dataDir.setAccessible(true);dataDir.set(mc,root);
@@ -55,8 +62,19 @@ public final class EditorInputTest {
         try(FileOutputStream out=new FileOutputStream(new File(root,"config/nei-level-maintainer.properties"))){prefs.store(out,"");}
         ItemStack stack=(ItemStack)allocate(ItemStack.class);
         Field item=ItemStack.class.getDeclaredField("field_151002_e");item.setAccessible(true);item.set(stack,allocate(TestItem.class));
+        StringBuilder shared=null;
+        if(args.length>1) {
+            shared=(StringBuilder)Class.forName("me.eigenraven.lwjgl3ify.client.TextFieldHandler").getField("textBuffer").get(null);
+            shared.append("stale NEI text");
+        }
+        TestNeiField nei=(TestNeiField)allocate(TestNeiField.class);
+        GuiTextField neiField=new GuiTextField(mc.field_71466_p,0,0,90,18);neiField.func_146180_a("original search");
+        Field wrapped=codechicken.nei.TextField.class.getDeclaredField("field");wrapped.setAccessible(true);wrapped.set(nei,neiField);
+        nei.setFocus(true);codechicken.nei.LayoutManager.setInputFocused(nei);
         MaintenanceGui hover=new MaintenanceGui(stack);
         hover.func_146280_a(mc,640,360);
+        check(!nei.focused()&&codechicken.nei.LayoutManager.getInputFocused()==null);
+        if(shared!=null)check(shared.length()==0);
         replace(hover,"low","10");replace(hover,"target","64");replace(hover,"batch","16");
         check(BridgeCommand.item(field(hover,"name").func_146179_b(),field(hover,"low").func_146179_b(),field(hover,"target").func_146179_b(),field(hover,"batch").func_146179_b()).equals("LM1|I|New Test Item|10|64|16"));
         Field buttons=GuiScreen.class.getDeclaredField("field_146292_n");buttons.setAccessible(true);GuiButton type=null;for(Object button:(java.util.List)buttons.get(hover))if(((GuiButton)button).field_146127_k==5)type=(GuiButton)button;
@@ -68,6 +86,25 @@ public final class EditorInputTest {
         managed.func_146280_a(mc,640,360);replace(managed,"low","10");replace(managed,"target","64");replace(managed,"batch","16");
         MaintenanceGui manual=new MaintenanceGui(null,null,prefs.getProperty("screen"));
         manual.func_146280_a(mc,640,360);replace(manual,"low","20");replace(manual,"target","128");replace(manual,"batch","32");
+        // Simulate a stale container delivering events while the editor is open.
+        mc.field_71462_r=hover;nei.setFocus(true);codechicken.nei.LayoutManager.setInputFocused(nei);
+        if(shared!=null)shared.append("999");
+        replace(hover,"low","123");
+        ClientProxy proxy=new ClientProxy();
+        check(proxy.keyTyped(null,(char)0,14));
+        check(field(hover,"low").func_146179_b().equals("12"));
+        check(proxy.keyTyped(null,(char)0,211));
+        check(field(hover,"low").func_146179_b().equals("12"));
+        check(proxy.keyTyped(null,(char)0,5));check(proxy.keyTyped(null,'4',0));
+        check(field(hover,"low").func_146179_b().equals("124"));
+        check(!nei.focused()&&codechicken.nei.LayoutManager.getInputFocused()==null);
+        check(neiField.func_146179_b().equals("original search"));
+        if(shared!=null)check(shared.length()==0);
+        if(shared!=null)shared.append("close residue");
+        hover.func_146281_b();
+        for(String name:new String[]{"screen","low","target","batch"})check(!field(hover,name).func_146206_l());
+        if(shared!=null)check(shared.length()==0);
+        manual.func_146281_b();managed.func_146281_b();
         System.out.println("PASS: real editor lifecycle/input and button drawing checks: "+checks);
     }
 }

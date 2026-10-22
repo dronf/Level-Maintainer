@@ -11,6 +11,14 @@ public final class FieldFocusTest {
         @Override public String func_78262_a(String s,int width,boolean reverse){int n=Math.min(s.length(),Math.max(0,width/6));return reverse?s.substring(s.length()-n):s.substring(0,n);}
         @Override public int func_78256_a(String s){return s.length()*6;}
     }
+    public static final class TrackedField extends GuiTextField {
+        static GuiTextField owner;
+        TrackedField(FontRenderer font,int x){super(font,x,20,90,18);}
+        @Override public void func_146195_b(boolean value) {
+            super.func_146195_b(value);
+            if(value)owner=this;else if(owner==this)owner=null;
+        }
+    }
     private static int checks;
     private static void check(boolean ok){checks++;if(!ok)throw new AssertionError("input check "+checks);}
     public static void main(String[] args)throws Exception {
@@ -68,6 +76,12 @@ public final class FieldFocusTest {
                 check(fields[1].func_146179_b().equals(""+digit+digit));
             }
         }
+        GuiTextField tracked=new TrackedField(font,0),stale=new TrackedField(font,100);
+        FieldFocus isolated=new FieldFocus(new GuiTextField[]{tracked},new boolean[]{true});
+        isolated.focus(0,true);stale.func_146195_b(true);
+        check(tracked.func_146206_l()&&TrackedField.owner==stale);
+        isolated.key((char)0,2);check(TrackedField.owner==tracked);
+        isolated.close();check(!tracked.func_146206_l()&&TrackedField.owner==null);
         System.out.println("PASS: real Minecraft text-field focus/input checks: "+checks);
     }
 }

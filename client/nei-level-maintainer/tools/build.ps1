@@ -59,7 +59,26 @@ $editorArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.d
 [IO.File]::WriteAllLines($editorArgsFile,@($editorArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$editorArgsFile"
 if ($LASTEXITCODE -ne 0) { throw 'Real editor input / button rendering tests failed' }
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.1.4.jar'
+# Repeat the editor checks with the actual installed lwjgl3ify shared buffer.
+$lwjgl3ify=Join-Path $ModsDirectory 'lwjgl3ify-3.0.37.jar'
+if(Test-Path -LiteralPath $lwjgl3ify) {
+    $compatArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',"$editorClasspath;$lwjgl3ify",'dev.dronf.neilevel.EditorInputTest',(Join-Path $project 'build'),'lwjgl3ify')
+    $compatFile=Join-Path $project 'build/compat-test.args'
+    [IO.File]::WriteAllLines($compatFile,@($compatArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+    & $java "@$compatFile"
+    if ($LASTEXITCODE -ne 0) {throw 'Installed lwjgl3ify buffer isolation checks failed'}
+    $sharedArgs=@('-cp',"$editorClasspath;$lwjgl3ify",'dev.dronf.neilevel.SharedBufferTest')
+    $sharedFile=Join-Path $project 'build/shared-buffer-test.args'
+    [IO.File]::WriteAllLines($sharedFile,@($sharedArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+    & $java "@$sharedFile"
+    if ($LASTEXITCODE -ne 0) {throw 'Installed lwjgl3ify buffer leak regression failed'}
+}
+$pauseArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.dronf.neilevel.ManagerPauseTest',(Join-Path $project 'build'))
+$pauseFile=Join-Path $project 'build/pause-test.args'
+[IO.File]::WriteAllLines($pauseFile,@($pauseArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+& $java "@$pauseFile"
+if ($LASTEXITCODE -ne 0) {throw 'Manager pause/resume checks failed'}
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.2.0.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar
