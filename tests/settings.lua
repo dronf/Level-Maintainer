@@ -3,6 +3,7 @@ local function read(text) return assert(load(text, "=test settings", "t", {}))()
 local template = [[local settings = {}
 -- new explanations
 settings.sleep = 10
+settings.headerInterval = 5
 settings.retryDelay = 60
 settings.requireFreeCpu = true
 settings.thresholdIntervals = {15, 30, 60, 120, 300}
@@ -12,6 +13,7 @@ return settings
 ]]
 local old = [[local settings = {}
 settings.sleep = 25
+settings.headerInterval = 1
 settings.retryDelay = 0
 settings.requireFreeCpu = false
 settings.thresholdIntervals = {0, 10, 20, 30, 40}
@@ -22,6 +24,7 @@ return settings
 ]]
 local merged, missing = Settings.merge(old, template)
 local values = read(merged)
+assert(values.headerInterval == 1)
 assert(values.sleep == 25 and values.retryDelay == 0 and values.requireFreeCpu == false)
 assert(values.cpuName == "CPU -- one" and values.layout == "tall")
 assert(values.thresholdIntervals[1] == 0 and values.thresholdIntervals[5] == 40)

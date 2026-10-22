@@ -3,8 +3,9 @@ local realLoadfile = loadfile
 local function simulate(options)
     local now, stop = 0, options.stop or 25
     local amounts = {Fast = options.stock or 90, Other = 1000}
-    local reads, requests, jobs, snapshots = {}, {}, {}, {}
-    local settings = {sleep = 10, display = "log", retryDelay = 60,
+    local reads, requests, jobs, snapshots, headers = {}, {}, {}, {}, {}
+    local settings = {sleep = 10, display = options.table and "table" or "log", retryDelay = 60,
+        headerInterval = options.headerInterval,
         cpuName = options.named and "test" or nil, reloadCheck = options.reloadCheck or 0}
     local policy = options.policy or {low = 100, target = 250, batch = 40, refillInterval = 3}
     local config = {items = {Other = {100, 10}, Passive = {nil, 1}}}
@@ -89,7 +90,9 @@ local function simulate(options)
     package.preload.filesystem = function() return {lastModified = function() return timestamp end, exists = function() return false end} end
     package.preload.shell = function() return {resolve = function(p) return p end} end
     package.preload["src.Display"] = function()
-        return setmetatable({isActive = function() return false end}, {__index = function() return function() end end})
+        return setmetatable({isActive = function() return options.table or false end,
+            setHeader = function() headers[#headers + 1] = now end},
+            {__index = function() return function() end end})
     end
     package.preload["src.Utility"] = function()
         logInfo, setTimeOffset, currentTime = function() end, function() end, function() return "" end
@@ -107,7 +110,7 @@ local function simulate(options)
         if req.name == "Fast" then fast[#fast + 1] = req end
         if req.name == "Passive" then passive[#passive + 1] = req.time end
     end
-    return fast, passive, reads, snapshots
+    return fast, passive, reads, snapshots, headers
 end
 local function times(requests, expected)
     assert(#requests == #expected, "unexpected request count: " .. #requests)
@@ -151,3 +154,15 @@ end
 times(simulate{duration = 0, policy = {100, 40, refillInterval = 2}}, {})
 print("PASS: item/fluid refill timers, independent ordinary/idle schedules, busy jobs/CPUs,")
 print("cooldowns, fractional intervals, target caps, reloads, network errors and validation")
+
+-- Header wakeups change only screen cadence, never maintenance deadlines.
+local fast, passive, _, _, headers = simulate{table = true, headerInterval = 5, stock = 1000, stop = 21}
+times(fast, {})
+assert(#headers == 4 and headers[1] == 5 and headers[4] == 20)
+assert(#passive == 3 and passive[1] == 0 and passive[2] == 10 and passive[3] == 20)
+times(simulate{table = true, headerInterval = 5, duration = 0}, {0, 3, 6, 9})
+for _, invalid in ipairs{0, -1, "bad", math.huge, 0/0} do
+    local _, _, _, _, events = simulate{table = true, headerInterval = invalid, stock = 1000, stop = 11}
+    assert(#events == 2 and events[1] == 5 and events[2] == 10)
+end
+print("PASS: configurable header cadence, validation and unchanged crafting/refill schedules")

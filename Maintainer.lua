@@ -44,6 +44,7 @@ end
 local function buildSettings(userSettings, cfg)
     local s = {
         sleep = (cfg and cfg.sleep) or 10,
+        headerInterval = 5,
         retryDelay = 60,
         requireFreeCpu = true,
         cpuName = nil,
@@ -604,11 +605,13 @@ local KEY_UP, KEY_DOWN, KEY_PAGE_UP, KEY_PAGE_DOWN = 0xC8, 0xD0, 0xC9, 0xD1
 -- Returns "edited" or "reload" when one of those keys was used, otherwise nil.
 local function idle(timeout)
     local deadline = computer.uptime() + timeout
+    local interval = tonumber(settings.headerInterval)
+    if not interval or interval ~= interval or interval <= 0 or interval == math.huge then interval = 5 end
     repeat
         local wait = math.max(0, deadline - computer.uptime())
         local countdown = nextCycleAt ~= nil and display.isActive()
         if countdown then
-            wait = math.min(wait, 1) -- wake every second to update "Next cycle in"
+            wait = math.min(wait, interval) -- cosmetic only; refill deadlines still win
         end
         local name, _, char, code = event.pull(wait, "key_down")
         if name == "key_down" then
