@@ -103,5 +103,17 @@ public final class MaintenanceGui extends MaintainerScreen {
         for(GuiTextField f:new GuiTextField[]{name,screen,low,target,batch})f.func_146194_f();
         int line=y+182;for(Object text:field_146289_q.func_78271_c(feedback,270)) {field_146289_q.func_78276_b((String)text,x,line,0xffcc55);line+=10;}
         super.func_73863_a(mx,my,partial);
+        if(my>=y+91&&my<y+123) {
+            String help=null;
+            if(mx>=x&&mx<x+84)help="Start refilling when stock falls BELOW Low. Reaching Low does not stop an active refill.";
+            else if(mx>=x+93&&mx<x+177)help="Once started, keep refilling until stock reaches Target. Then wait until it falls below Low again.";
+            else if(mx>=x+186&&mx<x+270)help="Maximum amount requested per job. The final request is capped by the amount missing from Target. Recipe output sizes may overshoot.";
+            if(help!=null) {
+                java.util.List<String> lines=new java.util.ArrayList<>();
+                lines.addAll(field_146289_q.func_78271_c(help,Math.max(80,Math.min(220,field_146294_l-24))));
+                lines.addAll(field_146289_q.func_78271_c("Items use individual units, not stacks. Fluids use mB (1,000 mB = 1 bucket).",Math.max(80,Math.min(220,field_146294_l-24))));
+                func_146283_a(lines,mx,my);
+            }
+        }
     }
 }

@@ -87,8 +87,9 @@ for _,fluid in ipairs{false,true}do
         check(#cpus==3 and cpus[1]==0 and cpus[2]==10 and cpus[3]==11,"unexpected CPU cadence: "..table.concat(cpus,","))
     end
 end
-local requests,reads,rows=simulate{initiallyPaused=true,noCommands=true}
-check(#requests==0 and #reads==0 and rows[1].status=="paused")
+local requests,reads,rows,_,cpus=simulate{initiallyPaused=true,noCommands=true}
+check(#requests==0 and #reads==0 and #cpus==0 and rows[1].status=="paused",
+    "an entirely paused list must not query AE2 CPUs or stock")
 local _,_,_,saved=simulate{noCommands=false,stop=7}
 requests,reads,rows=simulate{noCommands=true,saved=saved}
 check(#requests==0 and #reads==0 and rows[1].status=="paused","pause must survive process restart")

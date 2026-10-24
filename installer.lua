@@ -5,7 +5,13 @@ local scripts = {"src/AE2.lua", "src/Display.lua", "src/Utility.lua", "src/Setti
 
 local repo = "https://raw.githubusercontent.com/dronf/Level-Maintainer/";
 local api = "https://api.github.com/repos/dronf/Level-Maintainer/commits/";
-local branch = "master"
+-- Optional branch, tag or commit lets a release be installed as one matching set.
+local branch = ...
+branch = branch or "master"
+if type(branch) ~= "string" or not branch:match("^[%w_./-]+$") or branch:find("..", 1, true) then
+    print("Invalid version. Pass a branch, tag or commit, or omit it for master.")
+    return
+end
 local dir = shell.getWorkingDirectory()
 
 -- GitHub caches each file on a branch for up to 5 minutes, so right after an update
@@ -83,6 +89,12 @@ local failed = {}
 for _, file in ipairs(downloads) do
     if not download(file) then
         table.insert(failed, file)
+    else
+        -- Compile only: an HTML error page or truncated Lua must never replace
+        -- a working installation. Do not execute downloaded code to validate it.
+        local text = readFile(temp(file))
+        local chunk = text and load(text, "@" .. file, "t", {})
+        if not chunk then table.insert(failed, file .. " (invalid Lua)") end
     end
 end
 
@@ -91,15 +103,65 @@ if #failed > 0 then
         filesystem.remove(temp(file))
     end
     print()
-    print("Could not download: " .. table.concat(failed, ", "))
+    print("Could not download or validate: " .. table.concat(failed, ", "))
     print("Nothing was changed. Check that the computer has an internet card and")
     print("try again. Not rebooting.")
     return
 end
 
+local function cleanupDownloads()
+    for _, file in ipairs(downloads) do filesystem.remove(temp(file)) end
+end
+local function backup(file) return path(file .. ".install-backup") end
+-- A leftover backup can be the only good copy after a disk failure. Never
+-- overwrite it on a later run; report its path for recovery instead.
 for _, file in ipairs(wanted) do
-    filesystem.remove(path(file))
-    filesystem.rename(temp(file), path(file))
+    if filesystem.exists(backup(file)) then
+        cleanupDownloads()
+        print("Unfinished update backup: " .. backup(file))
+        print("Recover that file before updating again. Not rebooting.")
+        return
+    end
+end
+
+local backedUp, installed = {}, {}
+local function rollback(reason)
+    print("Could not install scripts: " .. tostring(reason))
+    local restored = true
+    for i = #wanted, 1, -1 do
+        local file = wanted[i]
+        if installed[file] then
+            local removed = filesystem.remove(path(file))
+            if not removed then restored = false end
+        end
+        if backedUp[file] then
+            local ok = filesystem.rename(backup(file), path(file))
+            if not ok then
+                restored = false
+                print("Restore manually from " .. backup(file))
+            end
+        end
+    end
+    cleanupDownloads()
+    print(restored and "Previous installation restored. Not rebooting."
+        or "Recovery is incomplete; keep the backups above. Not rebooting.")
+end
+-- Retain every original until all replacements succeed. A failed rename must
+-- not silently reboot into a mixture of old and new modules.
+for _, file in ipairs(wanted) do
+    if filesystem.exists(path(file)) then
+        local ok, err = filesystem.rename(path(file), backup(file))
+        if not ok then rollback(file .. ": " .. tostring(err)); return end
+        backedUp[file] = true
+    end
+end
+for _, file in ipairs(wanted) do
+    local ok, err = filesystem.rename(temp(file), path(file))
+    if not ok then rollback(file .. ": " .. tostring(err)); return end
+    installed[file] = true
+end
+for _, file in ipairs(wanted) do
+    if backedUp[file] then filesystem.remove(backup(file)) end
 end
 
 local function ask(question)

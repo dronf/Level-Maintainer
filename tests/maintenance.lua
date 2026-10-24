@@ -112,9 +112,10 @@ local function run(conf, initial, duration, hook)
     assert(realLoadfile("Maintainer.lua"))()
 end
 run({100, 40}, 1000, 300)
-assert(stockReads == 1 and #requests == 0 and cpuReads == 30)
+assert(stockReads == 1 and #requests == 0 and cpuReads == 1,
+    "stocked cooldown must avoid 29 unnecessary CPU snapshots")
 run({100, 40}, 110, 50)
-assert(stockReads == 3 and #requests == 0) -- t=0,20,40
+assert(stockReads == 3 and #requests == 0 and cpuReads == 3) -- t=0,20,40
 run({low = 100, target = 150, batch = 40}, 90, 30)
 assert(#requests == 2 and requests[1] == 40 and requests[2] == 20)
 run({nil, 40}, 0, 30)
@@ -122,7 +123,7 @@ assert(stockReads == 0 and #requests == 3)
 run({low = 100, target = 50, batch = 40}, 0, 30)
 assert(stockReads == 0 and #requests == 0) -- invalid config skipped
 run({100, 40}, 0, 70, function(cycle) fail = cycle == 1 end)
-assert(#requests == 2) -- failure at t=0, retry at t=60
+assert(#requests == 2 and cpuReads == 2) -- failure at t=0, retry at t=60
 edit = function()
     config = {items = {Test = {low = 100, target = 150, batch = 40}}}
 end
