@@ -178,9 +178,28 @@ local lastConfig = nil -- config in use, to tell which entries changed on reload
 local warnedCpuName = false
 local turn = 0 -- which entry goes first this cycle; moves on by one every cycle
 
--- Refreshed at the start of every cycle
+-- Refreshed at the start of each pass that has due work.
 local itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
 local useNamedCpu = false
+local haveCpuSnapshot, cpuSnapshotCached = false, false
+
+-- Do not cross the OC/AE2 boundary when every entry is paused or has a future
+-- deadline. Active jobs still need a fresh snapshot when their entry is due.
+local function needsCraftingSnapshot()
+    local now = computer.uptime()
+    for _, entry in ipairs(entries) do
+        local config, name = entry.config, entry.name
+        local state = stockState[config]
+        if not config.paused
+            and not (retryAt[name] and now < retryAt[name])
+            and not (state and state.checkAt and now < state.checkAt)
+            and not (config.refillInterval and state and state.refilling
+                and state.refillAt and now < state.refillAt) then
+            return true
+        end
+    end
+    return false
+end
 
 local function cpuAvailable()
     if not settings.requireFreeCpu then
@@ -288,8 +307,10 @@ local function refreshCrafting()
         logInfo("ERROR: " .. tostring(itemsCrafting))
         ae2.clearCache()
         itemsCrafting, freeCpus, cpuBusy, totalCpus = {}, 0, {}, 0
+        haveCpuSnapshot = false
         return false
     end
+    haveCpuSnapshot, cpuSnapshotCached = true, false
     useNamedCpu = settings.cpuName ~= nil and cpuBusy[settings.cpuName] ~= nil
     if settings.cpuName ~= nil and not useNamedCpu and not warnedCpuName then
         logInfo("WARNING: no crafting CPU named '" .. settings.cpuName .. "' found, AE2 will use any CPU.")
@@ -333,11 +354,13 @@ local nextCycleAt = nil -- uptime when the wait for the next cycle ends (nil whi
 
 -- "CPUs free: 9/11", or "CPUs busy: 2/11" with settings.cpuDisplay = "busy"
 local function cpuText()
+    if not haveCpuSnapshot then return "CPUs: not polled" end
     local free = math.max(freeCpus, 0)
+    local suffix = cpuSnapshotCached and " (cached)" or ""
     if settings.cpuDisplay == "busy" then
-        return string.format("CPUs busy: %d/%d", math.max(totalCpus - free, 0), totalCpus)
+        return string.format("CPUs busy: %d/%d", math.max(totalCpus - free, 0), totalCpus) .. suffix
     end
-    return string.format("CPUs free: %d/%d", free, totalCpus)
+    return string.format("CPUs free: %d/%d", free, totalCpus) .. suffix
 end
 
 -- Header parts; on a narrow screen the ones with the lowest `keep` are left out first
@@ -711,7 +734,9 @@ local function run()
         cycleNumber = cycleNumber + 1
         display.beginBatch()
 
-        if refreshCrafting() then
+        local due = needsCraftingSnapshot()
+        cpuSnapshotCached = not due
+        if due and refreshCrafting() then
             -- Start one entry further along each cycle, so with few free CPUs every
             -- entry gets its turn instead of the same one winning every time
             local count = #entries

@@ -1,55 +1,71 @@
-# NEI Level Maintainer 1.3.1
+# NEI Level Maintainer 1.3.2
 
-Ctrl+M now opens Manage existing entries during normal gameplay, without opening
-an inventory or NEI first. Either left or right Ctrl works.
+This update reduces idle AE2 queries, protects script updates against failed
+file replacement, and adds Low/Target/Batch hover explanations to the client editor.
 
-| Context | Shortcut | Result |
-| --- | --- | --- |
-| Normal gameplay | Ctrl+M | Manage existing entries |
-| Inventory/NEI, hovering an item | Ctrl+M | Add/Edit that item |
-| Inventory/NEI, no hovered item | Ctrl+M | Manage existing entries |
-| Inventory/NEI, with or without a hovered item | Ctrl+Shift+M | Manage existing entries |
+## Install this version
 
-Release M and Ctrl to open the screen. Held/repeated shortcut events open it
-once. Chat, OC terminals and other text-entry screens keep their own keys; close
-those screens first. Changing screens/worlds before release cancels the open.
+1. Close Minecraft. In Prism Launcher, open your GTNH instance's Minecraft
+   folder and replace the old NEI Level Maintainer JAR in `mods` with
+   `nei-level-maintainer-1.3.2.jar`. Keep exactly one version of this addon.
+2. On the OC computer, press Q to stop Maintainer. In its installation folder,
+   run these two commands to install the matching scripts, including before
+   the PR is merged into master:
 
-## Install/update
+```sh
+wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.2/installer.lua installer.lua
+installer nei-level-maintainer-1.3.2
+```
 
-1. Close Minecraft. In Prism, open the GTNH instance's Minecraft folder, then
-   `mods`. Replace the previous addon JAR with `nei-level-maintainer-1.3.1.jar`.
-   Keep exactly one NEI Level Maintainer addon version.
-2. Start Minecraft and join your world. Press and release Ctrl+M to open the
-   manager. It reuses the saved OC screen UUID and starts refreshing when set.
+The optional installer argument selects a branch, tag or commit. Omitting it
+continues to install master. Existing config.lua, nei_overrides.lua and settings
+values are retained; settings template refresh still asks before changing it.
+The installer reboots after a successful installation.
 
-This is a client-only update. Existing 1.3.0 OC scripts need no update for the
-hotkey. The batched listing, Pause/Resume and previous input fixes are included.
-The 1.2.0 receiver still works through the slower listing fallback. If upgrading
-older scripts for the faster listing, stop Maintainer with Q and run this from
-its OC installation directory, then let the installer reboot:
+The Lua improvements also work with client 1.3.1; only the hover explanations
+require the new JAR. Transport and receiver protocols have not changed. This
+remains client-only, using OC's existing clipboard and screen synchronization.
+
+For future master updates after merge, use the usual command:
 
 ```sh
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua installer.lua && installer
 ```
 
-Keep Maintainer running and open its OC screen once before syncing, so the
-client has the screen buffer. Use the GPU-bound screen UUID and stand within
-normal OC interaction range. No server addon or external service is required.
+## What changed
+
+- When every entry is paused or waiting for its stock/retry/refill deadline,
+  the script skips CPU/job queries. Active entries retain their prior cadence.
+- The header marks a retained CPU count as `(cached)` rather than implying it
+  was just read. An untouched/paused list can show `CPUs: not polled`.
+- Downloads are compiled as Lua without executing them before replacement.
+  All original scripts are kept until every replacement succeeds. On failure,
+  the installer restores the previous scripts and does not reboot. If rollback
+  also fails, it preserves `.install-backup` files and prints recovery paths.
+- Hover Low, Target or Batch in Add/Edit for an explanation of thresholds,
+  request sizing and units. Input, hotkeys, manager listing and pause controls
+  retain their existing behavior.
+
+If an interrupted update reports `.install-backup` files, keep them. Restore
+those originals to their corresponding paths before retrying; the installer
+refuses to overwrite a leftover recovery copy.
 
 ## Test in Minecraft
 
-- In the world, use each Ctrl key with M. Hold the shortcut briefly, then release
-  it; one manager should open, without stray text. Close it and repeat.
-- In an inventory/NEI, Ctrl+M over an item should open its editor; Ctrl+Shift+M
-  should open the manager. Ctrl+M over empty space also opens the manager.
-- In chat or an OC terminal, Ctrl+M should retain that screen's normal behavior.
-- Check that Add/Edit numbers accept top-row digits, numpad, Backspace, Delete
-  and selection replacement, without changing the NEI search field.
-- Refresh, edit and pause/resume an existing entry; verify the OC dashboard
-  matches. Listing and transport behavior are unchanged from 1.3.0.
+- Open the editor via Ctrl+M over an NEI item, and via Manage existing entries.
+  Hover each numeric field and its label; verify the help stays readable.
+- Check top-row digits, numpad, selection replacement, Backspace/Delete, and
+  Item/Fluid switching. Confirm no text appears in the NEI search bar.
+- With stocked entries, watch the header change to `(cached)` on skipped cycles.
+  Pause all entries, then resume one and confirm maintenance resumes on its
+  normal next cycle. Already submitted AE2 jobs continue while paused.
+- Check a low-stock entry refills to Target and a timed refill keeps its cadence.
+- Run the version-pinned update and confirm your existing entries/settings
+  survive. Automated tests exercise failure recovery without risking your disk.
 
-Automated hotkey, input, manager and binary API checks passed. Physical gameplay
-has not been tested for this build; see VERIFICATION-1.3.1.md.
+The API-call reductions are measured in a deterministic test, not a live TPS
+benchmark. Full multiplayer gameplay and rendered tooltip appearance still need
+in-game confirmation. See VERIFICATION-1.3.2.md for automated checks.
 
 ## Open and use the manager
 
