@@ -1,95 +1,42 @@
-# NEI Level Maintainer 1.3.0 verification - 2026-10-23
+# NEI Level Maintainer 1.3.1 verification - 2026-10-24
 
-Artifact: `nei-level-maintainer-1.3.0.jar`.
-SHA-256: `67a036d5215d210e70234ab949027fb0356c9be68bbec95e0b9991bf337d07f6`.
+Artifact: `nei-level-maintainer-1.3.1.jar`.
+SHA-256: `6694395e870ee24e7ee3d3248134ce8a8bc9249ba12b72c759144beb48371822`.
 
-Built using JDK 17 with `--release 8` against the actual installed GTNH 2.9 RC2
+Built with JDK 17 `--release 8` against the actual installed GTNH 2.9 RC2
 Minecraft 1.7.10 SRG, Forge 10.13.4.1614, NEI 2.8.155-GTNH and OC 1.12.64-GTNH
-binaries. All 16 classes use Java 8 format; all 1,330 member references resolve
-against the pack dependencies. Metadata, entrypoints and SRG GUI overrides pass.
-Only addon classes, manifest and mcmod.info are packaged; no dependencies are bundled.
-
-## Listing benchmark
-
-The real Lua receiver handles the same 23 representative item/fluid entries in
-LM3 and LM4, using a deterministic GPU and no network delays. Counts exclude the
-final cleanup command and any retries:
-
-| Screen | Listing exchanges, old -> new | GPU set calls, old -> new | GPU fill calls, old -> new |
-| --- | --- | --- | --- |
-| 50x16 | 24 -> 2 | 58 -> 30 | 24 -> 0 |
-| 80x25 | 24 -> 1 | 46 -> 18 | 24 -> 0 |
-| 160x50 | 24 -> 1 | 24 -> 9 | 24 -> 0 |
-
-Longer names/values require more pages. This measures transport/component work,
-not a promised 12x/24x wall-clock speedup or a reduction in server MSPT. The exact
-OC JAR's clipboard cooldown is message length divided by ten milliseconds;
-short list requests incur only a few milliseconds. Serialized round trips,
-GPU work and synchronization are the larger avoidable costs.
+binaries. All 16 classes are Java 8 bytecode. The verifier resolved all 1,353
+member references, checked metadata/SRG overrides and loaded entrypoints with
+`-Xverify:all`. Only addon classes, manifest and mcmod.info are packaged.
 
 ## Passed checks
 
-- 29 Lua batch checks: frozen snapshots, idempotent first-page retry, external
-  config edits, screen resizing, expiry, wrong-token cleanup, empty list,
-  too-small screen, 64-record/4,096-character bounds, and GPU call counts.
-- 104 Java protocol checks including LM2, LM3 and LM4 frames emitted by the real
-  Lua receiver, Unicode/semicolon names, legacy empty quantities, pause flags,
-  wrong offsets/nonces, malformed/partial records and checksum failures.
-- 23 real ManagerGui tick/control checks with deterministic transport/time:
-  multi-page loading, stale/partial replies, retries, atomic completion, retained
-  selection, cancelled/failed load restrictions, empty results, legacy fallback,
-  late replies, changed totals, timeout and close cleanup.
-- Existing 12 manager pause checks, 20 update-encoder checks, 74 real text-field
-  checks, 77 editor/render checks (80 with the installed lwjgl3ify buffer), and
-  the shared-buffer input leak regression pass.
-- Existing Lua maintenance, refill, pause (41), receiver (23), manager (38),
-  real OpenOS buffered-I/O (11), display, settings, installer and utility suites
-  pass. Display tests cover purple paused rows and header/log overlay protection.
-- Renderer equivalence still passes all 20 previous layout/depth/page cases.
-- JAR/ZIP CRCs, Java versions, artifact namespaces and companion package contents
-  are checked. Companion scripts omit existing user configuration/overrides.
+- 34 hotkey checks invoke the actual FML key/tick and NEI container callbacks
+  with synthetic LWJGL event state. They cover both Ctrl keys, deferred opening,
+  held/repeated/duplicate events, release-only and character-only events,
+  unrelated keys, text-entry screens, no-world/no-player guards, changed
+  screen/world/player cancellation and both Shift keys in the inventory path.
+- Existing real Minecraft GUI checks: 74 field-focus/input, 77 editor/render
+  checks (80 using installed lwjgl3ify 3.0.37), shared-buffer leak regression,
+  12 pause/resume controls and 23 batched/fallback listing lifecycle checks.
+- 20 command-encoder and 38 screen-reply protocol checks.
+- JAR and source ZIP CRCs, namespaces, Java class version and release metadata.
 
-## Reproduce
+The gameplay handler uses Forge 1.7.10's FML KeyInputEvent on the existing FML
+bus registration. It only queues a manager in a loaded world with no screen
+open. The NEI handler retains hovered-item editing and stale-editor input
+forwarding. Both paths wait until M and both Ctrl keys are released, and open
+at ClientTickEvent END after confirming the original screen/world still match.
+No Lua, clipboard protocol, AE2 polling or CPU scheduling changes are included.
 
-Run the client README's build and verify scripts with the actual pack JARs.
-From the repository root, run Lua 5.2+:
+## Reproduce and limits
 
-```sh
-lua tests/nei-batch.lua batch-80.txt batch-50.txt
-lua tests/nei-manager.lua frames.txt pause-frames.txt client/nei-level-maintainer/build/pause-commands.txt
-lua tests/nei-bridge.lua
-lua tests/maintenance.lua
-lua tests/refill-interval.lua
-lua tests/pause.lua
-lua tests/display.lua
-lua tests/settings.lua
-lua tests/installer.lua
-lua tests/utility.lua
-```
+Run tools/build.ps1 and tools/verify.ps1 as documented in the client README,
+passing the real pack dependencies. The build includes HotkeyTest alongside
+the existing regression suite. The test uses actual Minecraft/LWJGL classes
+but supplies keyboard state and replaces opening a rendered GUI with a recorder.
+It does not simulate physical hardware, full modpack transformation or network
+delivery. Perform the acceptance checks in INSTALLATION-1.3.1.md in Minecraft.
 
-Then use the emitted ASCII frames with the Java test:
-
-```sh
-java -cp "client/nei-level-maintainer/build/classes;client/nei-level-maintainer/build/tests" dev.dronf.neilevel.ScreenReplyTest frames.txt pause-frames.txt batch-80.txt batch-50.txt
-```
-
-The Lua manager test's last argument is optional and consumes commands generated
-by ManagerPauseTest during the build. See the preceding verification document
-for extraction/testing of the real OpenOS buffering implementation.
-
-## Protocol
-
-`LM4|Q|nonce|screen|offset` requests a page. Offset is the number of records
-already received, beginning at zero. Replies are
-`LM4R|nonce|offset|total|count|records|adler32|END`.
-Records are separated with semicolons; each is the existing LM3 seven-field
-item/fluid record with a hex UTF-8 name and pause flag. The initial response
-already contains entries. The client advances by count and commits only when
-the total is reached. Repeated offset-zero queries with the same nonce reuse
-the snapshot until its five-second idle expiry. A new refresh uses a new nonce.
-`LM2|END|nonce` releases the overlay for all versions.
-
-Boundary: production UI/receiver/serializer/scheduler code is exercised, while
-OC/AE2/GPU/network delivery is simulated. Fonts/drawing are stubbed in headless
-GUI tests. Full modpack transformation and physical gameplay still need the
-acceptance checks in INSTALLATION-1.3.0.md.
+The prior Lua/transport benchmark and verification remain documented in
+client/VERIFICATION-1.3.0.md; those components were not changed in this release.

@@ -1,81 +1,63 @@
-# NEI Level Maintainer 1.3.0
+# NEI Level Maintainer 1.3.1
 
-Manage existing entries now loads a batch of entries per clipboard/screen exchange.
-In the 23-entry test, listing exchanges drop from 24 to 1 on an 80x25 or 160x50
-screen, and to 2 on a 50x16 screen. These are measured protocol counts; elapsed
-time in game still depends on server ticks, OC execution and screen synchronization.
+Ctrl+M now opens Manage existing entries during normal gameplay, without opening
+an inventory or NEI first. Either left or right Ctrl works.
 
-The manager also retains the selected entry after refresh, supports mouse-wheel
-paging, remembers a successfully used screen UUID and shows the completed load
-time. Refresh becomes Cancel while loading. Closing or cancelling sends an END
-request so the dashboard can return promptly; OC's existing clipboard cooldown
-can defer cleanup to the session timeout. A failed or cancelled refresh leaves
-the previous list visible with Edit/Pause/Remove disabled until a fresh load.
+| Context | Shortcut | Result |
+| --- | --- | --- |
+| Normal gameplay | Ctrl+M | Manage existing entries |
+| Inventory/NEI, hovering an item | Ctrl+M | Add/Edit that item |
+| Inventory/NEI, no hovered item | Ctrl+M | Manage existing entries |
+| Inventory/NEI, with or without a hovered item | Ctrl+Shift+M | Manage existing entries |
+
+Release M and Ctrl to open the screen. Held/repeated shortcut events open it
+once. Chat, OC terminals and other text-entry screens keep their own keys; close
+those screens first. Changing screens/worlds before release cancels the open.
 
 ## Install/update
 
-1. Close Minecraft. In Prism, open the GTNH instance's Minecraft folder and its
-   `mods` folder. Replace the old NEI Level Maintainer addon with
-   `nei-level-maintainer-1.3.0.jar`; keep exactly one addon version.
-2. After the batched-manager PR is merged, press Q to stop Maintainer and run
-   this from its OC installation directory (usually `/home`):
+1. Close Minecraft. In Prism, open the GTNH instance's Minecraft folder, then
+   `mods`. Replace the previous addon JAR with `nei-level-maintainer-1.3.1.jar`.
+   Keep exactly one NEI Level Maintainer addon version.
+2. Start Minecraft and join your world. Press and release Ctrl+M to open the
+   manager. It reuses the saved OC screen UUID and starts refreshing when set.
+
+This is a client-only update. Existing 1.3.0 OC scripts need no update for the
+hotkey. The batched listing, Pause/Resume and previous input fixes are included.
+The 1.2.0 receiver still works through the slower listing fallback. If upgrading
+older scripts for the faster listing, stop Maintainer with Q and run this from
+its OC installation directory, then let the installer reboot:
 
 ```sh
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua installer.lua && installer
 ```
 
-3. Let the installer reboot OC to clear cached Lua modules. Existing config,
-   NEI overrides and settings values are preserved. Restart Minecraft with the
-   new client JAR.
+Keep Maintainer running and open its OC screen once before syncing, so the
+client has the screen buffer. Use the GPU-bound screen UUID and stand within
+normal OC interaction range. No server addon or external service is required.
 
-Update both the JAR and OC scripts to get the faster listing. With the 1.2.0
-receiver, the new client waits 1.5 seconds then falls back to the older per-entry
-listing and suggests updating OC. Updated scripts retain LM1/LM2/LM3 support for
-older clients. Pause/Resume and the earlier keyboard fixes are included.
+## Test in Minecraft
 
-Before merging, `level-maintainer-oc-1.3.0.zip` can be copied into an accessible OC
-drive's installation folder with Maintainer stopped, retaining its `src/` folder.
-Then reboot OC. The ZIP contains no config.lua, settings.lua or nei_overrides.lua.
-The normal master installer installs this change only after the PR is merged.
+- In the world, use each Ctrl key with M. Hold the shortcut briefly, then release
+  it; one manager should open, without stray text. Close it and repeat.
+- In an inventory/NEI, Ctrl+M over an item should open its editor; Ctrl+Shift+M
+  should open the manager. Ctrl+M over empty space also opens the manager.
+- In chat or an OC terminal, Ctrl+M should retain that screen's normal behavior.
+- Check that Add/Edit numbers accept top-row digits, numpad, Backspace, Delete
+  and selection replacement, without changing the NEI search field.
+- Refresh, edit and pause/resume an existing entry; verify the OC dashboard
+  matches. Listing and transport behavior are unchanged from 1.3.0.
 
-## Use and test
-
-Open an inventory/NEI screen and press Left Ctrl+Shift+M, or use the entry editor's
-Manage existing entries button. Keep Maintainer running and open its OC screen
-once before syncing. The screen must be bound to that computer's GPU.
-
-- Refresh a list containing both items and fluids. Check the total, names,
-  amounts and paused flags against OC. Record the displayed load time.
-- Select an entry and pause/resume or edit it. The refreshed selection should
-  remain on that entry, and the OC status should agree.
-- Use Filter, mouse-wheel paging and Prev/Next. Cancel a refresh and refresh
-  again; partial data must not become editable. Close during a refresh and
-  check that the dashboard returns.
-- Try a small/large OC resolution, and verify Add/Edit numeric input and NEI's
-  search text still behave normally.
-
-No server addon or external service is required. Listing reads configuration,
-not ME inventory. This release adds no AE2/CPU polling; batches are capped at
-64 entries and 4,096 characters, and further limited by the actual screen size.
-The receiver takes one frozen configuration snapshot per transfer and reuses it
-for retries. It writes only the reply lines, avoiding a full-screen clear for
-each entry. Header/log updates respect the reply overlay while it is active.
-
-The client stops reading the screen buffer at the frame terminator and rejects
-an ordinary dashboard after its first five characters. Completed data remains
-nonce/index/checksum validated and replaces the list only after all pages arrive.
-There is no persistent cross-server cache that could expose stale entries.
-
-Compilation, API verification and automated protocol/GUI/Lua tests passed.
-Physical gameplay, real network timing and server MSPT have not been measured
-for this version. Details and reproducible tests are in VERIFICATION-1.3.0.md.
+Automated hotkey, input, manager and binary API checks passed. Physical gameplay
+has not been tested for this build; see VERIFICATION-1.3.1.md.
 
 ## Open and use the manager
 
-- **Left Ctrl+Shift+M** from an inventory or NEI container opens the manager.
-- **Left Ctrl+M** while hovering an item opens its Add/Edit/Remove editor.
+- **Ctrl+M** during normal gameplay opens the manager. Either Ctrl key works.
+- **Ctrl+Shift+M** from an inventory or NEI container opens the manager.
+- **Ctrl+M** while hovering an item opens its Add/Edit/Remove editor.
   The editor's **Manage existing entries** button opens the manager.
-- Left Ctrl+M without a hovered item also opens the manager.
+- Ctrl+M without a hovered item also opens the manager.
 - Enter the OC screen UUID and click **Refresh**. A saved UUID is reused and
   refresh starts automatically when opening the manager.
 - Filter the loaded list by name; use the mouse wheel or Prev/Next to page. Click a row to select

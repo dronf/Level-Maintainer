@@ -83,7 +83,12 @@ $syncFile=Join-Path $project 'build/sync-test.args'
 [IO.File]::WriteAllLines($syncFile,@($syncArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$syncFile"
 if ($LASTEXITCODE -ne 0) {throw 'Manager batched sync checks failed'}
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.3.0.jar'
+$hotkeyArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.dronf.neilevel.HotkeyTest')
+$hotkeyFile=Join-Path $project 'build/hotkey-test.args'
+[IO.File]::WriteAllLines($hotkeyFile,@($hotkeyArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+& $java "@$hotkeyFile"
+if ($LASTEXITCODE -ne 0) {throw 'Gameplay and NEI hotkey lifecycle checks failed'}
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.3.1.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar
