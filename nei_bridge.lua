@@ -95,22 +95,64 @@ local function snapshot(cfg,withPause)
   table.sort(rows,function(a,b) return a.kind..a.name<b.kind..b.name end)
   return rows
 end
+-- One bounded page per round trip. Hex names contain neither ';' nor '|'.
+local function batchFrame(w,h)
+  local prefix="LM4R|"..session.token.."|"..session.index.."|"..#session.rows.."|"
+  local capacity=math.min(w*h,4096)
+  local used=#prefix+3+13 -- count (up to 64), separator, checksum and END
+  local rows={}
+  for i=session.index+1,math.min(#session.rows,session.index+64) do
+    local row=session.rows[i].wire
+    local added=#row+(#rows>0 and 1 or 0)
+    if used+added>capacity then break end
+    rows[#rows+1]=row;used=used+added
+  end
+  if #rows==0 and session.index<#session.rows then
+    return frame("LM4R|"..session.token.."|ERR|Screen too small")
+  end
+  return frame(prefix..#rows.."|"..table.concat(rows,";"))
+end
 function M.paint(gpu)
   if not session or now()>session.untilTime then session=nil; return false end
   if gpu.getScreen()~=session.screen then return false end
   local w,h=gpu.getResolution()
+  if session.version=="4" and (session.width~=w or session.height~=h or not session.frame) then
+    session.frame=batchFrame(w,h);session.width=w;session.height=h
+  end
   local frame=session.frame
   if #frame>w*h then frame=M.errorFrame(session.token) end
   if #frame>w*h then return false end
-  gpu.fill(1,1,w,h," ")
-  for y=1,math.ceil(#frame/w) do gpu.set(1,y,frame:sub((y-1)*w+1,y*w)) end
+  if session.version~="4" then gpu.fill(1,1,w,h," ") end
+  for y=1,math.ceil(#frame/w) do
+    local line=frame:sub((y-1)*w+1,y*w)
+    gpu.set(1,y,line..string.rep(" ",w-#line))
+  end
   return true
 end
 function M.errorFrame(token) return frame("LM2R|"..token.."|ERR|Screen too small") end
-function M.install(reload,getConfig)
+function M.install(reload,getConfig,onSyncEnd)
   M.uninstall()
   M.listener=function(_,keyboard,message,player)
     if type(message)~="string" then return end
+    local bulkToken,bulkScreen,offset=message:match("^LM4|Q|(%x+)|([%x%-]+)|(%d+)$")
+    if bulkToken and #bulkToken==16 and #bulkScreen==36 and getConfig then
+      offset=tonumber(offset)
+      if session and now()>session.untilTime then session=nil end
+      local matches=session and session.token==bulkToken and session.screen==bulkScreen and session.version=="4"
+      if offset==0 and not matches then
+        local ok,cfg=pcall(getConfig)
+        if not ok or type(cfg)~="table" then return end
+        session={token=bulkToken,screen=bulkScreen,version="4",rows=snapshot(cfg,true)}
+        matches=true
+      end
+      if matches and offset<=#session.rows then
+        session.untilTime=now()+5
+        if session.index~=offset then session.frame=nil end
+        session.index=offset
+        pcall(function() M.paint(require("component").gpu) end)
+      end
+      return
+    end
     if message:sub(1,4)=="LM2|" or message:sub(1,4)=="LM3|" then
       local version,token,screen,index=message:match("^LM([23])|Q|(%x+)|([%x%-]+)|(%d+)$")
       if token and #token==16 and #screen==36 and getConfig then
@@ -129,7 +171,10 @@ function M.install(reload,getConfig)
         return
       end
       local done=message:match("^LM2|END|(%x+)$")
-      if done then if session and session.token==done then session=nil end; return end
+      if done then
+        if session and session.token==done then session=nil;if onSyncEnd then pcall(onSyncEnd) end end
+        return
+      end
     end
     local kind,name,low,target,batch=message:match("^LM1|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")
     local previousKind,newKind,newName,newLow,newTarget,newBatch=message:match("^LM2|T|([IF])|([IF])|([^|]+)|(%d+)|(%d+)|(%d+)$")

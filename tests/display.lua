@@ -47,6 +47,14 @@ for _,value in ipairs(colors)do if value==0xCC88FF then purple=true end end
 for _,text in ipairs(drawn)do if text:find("paused",1,true)then paused=true end end
 assert(purple and paused,"paused rows must draw purple with a readable status")
 
+local overlays=0
+display.clipboardOverlay=function()overlays=overlays+1;return true end
+drawn={}
+display.setHeader("New header")
+display.addLog("New log")
+assert(overlays==2 and #drawn==0,"header/log writes must not corrupt a clipboard reply")
+display.clipboardOverlay=nil
+
 display.stop()
 assert(width == 80 and height == 25)
 print("PASS: portrait fit/wide/tall layouts and original resolution restoration")

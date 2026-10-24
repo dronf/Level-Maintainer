@@ -548,7 +548,7 @@ end, function()
     local cfg, err = readConfig()
     if not cfg then error(err) end
     return cfg
-end)
+end, function() render() end)
 display.clipboardOverlay = require("nei_bridge").paint
 
 -- Reloads config.lua and settings.lua if they were saved since they were last read.

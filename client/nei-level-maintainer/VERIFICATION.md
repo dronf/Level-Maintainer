@@ -1,77 +1,95 @@
-# NEI Level Maintainer 1.2.0 verification
+# NEI Level Maintainer 1.3.0 verification - 2026-10-23
 
-Built with JDK 17 `javac --release 8` against the actual GTNH 2.9 RC2 binaries.
-Artifact: `nei-level-maintainer-1.2.0.jar`.
-SHA-256: `7f3c76870b379f1235514e0683b171f2df12f42807645af6ee8dd2fad6057ed4`.
+Artifact: `nei-level-maintainer-1.3.0.jar`.
+SHA-256: `67a036d5215d210e70234ab949027fb0356c9be68bbec95e0b9991bf337d07f6`.
 
-## Binary compatibility
+Built using JDK 17 with `--release 8` against the actual installed GTNH 2.9 RC2
+Minecraft 1.7.10 SRG, Forge 10.13.4.1614, NEI 2.8.155-GTNH and OC 1.12.64-GTNH
+binaries. All 16 classes use Java 8 format; all 1,330 member references resolve
+against the pack dependencies. Metadata, entrypoints and SRG GUI overrides pass.
+Only addon classes, manifest and mcmod.info are packaged; no dependencies are bundled.
 
-All 16 addon classes use Java 8 class format 52. The bytecode verifier resolves
-all 1,166 field/method references against actual Minecraft 1.7.10 SRG, Forge
-10.13.4.1614, NEI 2.8.155-GTNH, OC 1.12.64-GTNH and the pack libraries, including
-static/instance access. The JAR contains only addon classes, manifest and metadata.
-Dependencies are not redistributed. No custom server handler or external service
-is introduced; commands still use OC's existing clipboard transport and screen
-responses use its normally synchronized text buffer.
+## Listing benchmark
 
-## Passed tests
+The real Lua receiver handles the same 23 representative item/fluid entries in
+LM3 and LM4, using a deterministic GPU and no network delays. Counts exclude the
+final cleanup command and any retries:
 
-- 20 Java update-encoder checks; 41 reply/management checks when consuming real
-  Lua-generated LM2 and LM3 GPU frames, including paused flags and Unicode.
-- 12 checks exercising actual ManagerGui controls with transport recorded:
-  selection, Pause/Resume labels, item/fluid commands, purple rows, disabled
-  controls while syncing, explicit Remove, and refresh from authoritative state.
-  Its emitted pause/resume commands are consumed by the Lua receiver tests.
-- 74 real GuiTextField checks and 77 editor/render checks; 80 editor/render
-  checks with the installed lwjgl3ify 3.0.37 shared input buffer. The dedicated
-  shared-buffer leak regression also passes. Fonts/drawing are stubbed for these
-  headless tests; Minecraft's storage, cursor, focus and insertion code is real.
-- 38 Lua manager checks: LM2 compatibility, LM3 paused snapshots, pause/resume,
-  restart persistence, legacy continuous entries, quantity/type edits preserving
-  pause and fluid/refill metadata, tombstones, invalid flags, unknown entries,
-  write/rename failures, expiry and corrupt-file protection.
-- 41 real Maintainer/AE2-loop pause checks with deterministic components:
-  items and fluids, immediate/completing jobs, no stock queries while paused,
-  immediate dashboard status/color, resume of an active refill above Low,
-  capped final batch, persistence and unchanged CPU query cadence.
-- 23 existing PR #5 receiver checks and 11 checks with the unmodified OpenOS
-  buffered I/O extracted from OC 1.12.64-GTNH, including paused saves and
-  explicit flush/close failures.
-- Existing maintenance, refill-interval, display, settings, installer and utility
-  suites pass. The real display test verifies purple `0xCC88FF` and `paused` text.
-- Rendering matches the pre-optimization renderer in 20 layout/depth/page cases.
-  A 23-row draw uses 2 metadata queries instead of 8. Header cadence tests confirm
-  maintenance and scheduled refill timing are unchanged. These component-call
-  counts are not a measurement of server MSPT.
-- ZIP CRCs, Java class versions, JAR metadata and package contents verified.
+| Screen | Listing exchanges, old -> new | GPU set calls, old -> new | GPU fill calls, old -> new |
+| --- | --- | --- | --- |
+| 50x16 | 24 -> 2 | 58 -> 30 | 24 -> 0 |
+| 80x25 | 24 -> 1 | 46 -> 18 | 24 -> 0 |
+| 160x50 | 24 -> 1 | 24 -> 9 | 24 -> 0 |
+
+Longer names/values require more pages. This measures transport/component work,
+not a promised 12x/24x wall-clock speedup or a reduction in server MSPT. The exact
+OC JAR's clipboard cooldown is message length divided by ten milliseconds;
+short list requests incur only a few milliseconds. Serialized round trips,
+GPU work and synchronization are the larger avoidable costs.
+
+## Passed checks
+
+- 29 Lua batch checks: frozen snapshots, idempotent first-page retry, external
+  config edits, screen resizing, expiry, wrong-token cleanup, empty list,
+  too-small screen, 64-record/4,096-character bounds, and GPU call counts.
+- 104 Java protocol checks including LM2, LM3 and LM4 frames emitted by the real
+  Lua receiver, Unicode/semicolon names, legacy empty quantities, pause flags,
+  wrong offsets/nonces, malformed/partial records and checksum failures.
+- 23 real ManagerGui tick/control checks with deterministic transport/time:
+  multi-page loading, stale/partial replies, retries, atomic completion, retained
+  selection, cancelled/failed load restrictions, empty results, legacy fallback,
+  late replies, changed totals, timeout and close cleanup.
+- Existing 12 manager pause checks, 20 update-encoder checks, 74 real text-field
+  checks, 77 editor/render checks (80 with the installed lwjgl3ify buffer), and
+  the shared-buffer input leak regression pass.
+- Existing Lua maintenance, refill, pause (41), receiver (23), manager (38),
+  real OpenOS buffered-I/O (11), display, settings, installer and utility suites
+  pass. Display tests cover purple paused rows and header/log overlay protection.
+- Renderer equivalence still passes all 20 previous layout/depth/page cases.
+- JAR/ZIP CRCs, Java versions, artifact namespaces and companion package contents
+  are checked. Companion scripts omit existing user configuration/overrides.
 
 ## Reproduce
 
-Use the client README's PowerShell build/verify commands with your pack binaries.
-From the repository root with Lua 5.2+:
+Run the client README's build and verify scripts with the actual pack JARs.
+From the repository root, run Lua 5.2+:
 
 ```sh
-lua tests/pause.lua
+lua tests/nei-batch.lua batch-80.txt batch-50.txt
+lua tests/nei-manager.lua frames.txt pause-frames.txt client/nei-level-maintainer/build/pause-commands.txt
+lua tests/nei-bridge.lua
 lua tests/maintenance.lua
 lua tests/refill-interval.lua
-lua tests/nei-bridge.lua
-lua tests/nei-manager.lua frames.txt pause-frames.txt client/nei-level-maintainer/build/pause-commands.txt
+lua tests/pause.lua
 lua tests/display.lua
 lua tests/settings.lua
 lua tests/installer.lua
 lua tests/utility.lua
-python tests/extract-openos.py /path/to/OpenComputers-1.12.64-GTNH.jar /tmp/openos-lib
-lua tests/nei-openos-io.lua /tmp/openos-lib
 ```
 
-Then run Java's ScreenReplyTest with the two emitted frame files. The optional
-third Lua manager argument consumes commands emitted by ManagerPauseTest during
-the client build. Omit that argument when running the Lua tests independently.
+Then use the emitted ASCII frames with the Java test:
 
-## Verification boundary
+```sh
+java -cp "client/nei-level-maintainer/build/classes;client/nei-level-maintainer/build/tests" dev.dronf.neilevel.ScreenReplyTest frames.txt pause-frames.txt batch-80.txt batch-50.txt
+```
 
-The production receiver, serializer, manager controls, parser and Maintainer
-loop are tested; OC/AE2/GPU interactions are simulated. Full modpack mixin
-transformation, physical keyboard input and real network/screen synchronization
-have not been tested in a running Minecraft session. Follow the installation
-document's in-game acceptance test for those paths.
+The Lua manager test's last argument is optional and consumes commands generated
+by ManagerPauseTest during the build. See the preceding verification document
+for extraction/testing of the real OpenOS buffering implementation.
+
+## Protocol
+
+`LM4|Q|nonce|screen|offset` requests a page. Offset is the number of records
+already received, beginning at zero. Replies are
+`LM4R|nonce|offset|total|count|records|adler32|END`.
+Records are separated with semicolons; each is the existing LM3 seven-field
+item/fluid record with a hex UTF-8 name and pause flag. The initial response
+already contains entries. The client advances by count and commits only when
+the total is reached. Repeated offset-zero queries with the same nonce reuse
+the snapshot until its five-second idle expiry. A new refresh uses a new nonce.
+`LM2|END|nonce` releases the overlay for all versions.
+
+Boundary: production UI/receiver/serializer/scheduler code is exercised, while
+OC/AE2/GPU/network delivery is simulated. Fonts/drawing are stubbed in headless
+GUI tests. Full modpack transformation and physical gameplay still need the
+acceptance checks in INSTALLATION-1.3.0.md.

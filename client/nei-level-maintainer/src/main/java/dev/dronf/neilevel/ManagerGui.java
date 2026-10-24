@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiTextField;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import li.cil.oc.client.PacketSender;
 import java.util.*;
 import java.io.*;
@@ -14,11 +15,16 @@ public final class ManagerGui extends MaintainerScreen {
     private final List<MaintainedEntry> entries=new ArrayList<>(),incoming=new ArrayList<>();
     private List<MaintainedEntry> visible=new ArrayList<>();
     private String address="",filter="",status="Enter the OC screen UUID and click Refresh.",token;
-    private int page,selected=-1,index,total=-1;
-    private long sentAt,nextSend;
-    private boolean syncing,removeArmed;
+    private int page,selected=-1,index,total=-1,protocol=4;
+    private long sentAt,nextSend,startedAt;
+    private boolean syncing,removeArmed,verified,sessionOpen;
+    private String selectionKind,selectionName;
     private int listWidth,left,rows;
-    interface Channel {void send(String address,String message);void initialize(String address);}
+    interface Channel {
+        void send(String address,String message);void initialize(String address);
+        default String read(String address){return ScreenReader.read(address);}
+        default long now(){return System.currentTimeMillis();}
+    }
     private final Channel channel;
     public ManagerGui(String address) {this(address,new Channel(){
         public void send(String a,String m){ClipboardTransport.send(a,m);}
@@ -44,7 +50,7 @@ public final class ManagerGui extends MaintainerScreen {
     }
     private void rebuild() {
         field_146292_n.clear();
-        field_146292_n.add(new FlatButton(1,left+listWidth-68,27,68,20,"Refresh"));
+        field_146292_n.add(new FlatButton(1,left+listWidth-68,27,68,20,syncing?"Cancel":"Refresh"));
         visible=new ArrayList<>();
         for(MaintainedEntry e:entries)if((e.name+" "+e.kind+(e.paused?" paused":"")).toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))visible.add(e);
         page=Math.max(0,Math.min(page,Math.max(0,(visible.size()-1)/rows)));
@@ -61,7 +67,7 @@ public final class ManagerGui extends MaintainerScreen {
         int[] ids={2,3,8,4,5,6};
         for(int i=0;i<ids.length;i++) {
             GuiButton b=new FlatButton(ids[i],left+i*(bw+3),y,bw,20,labels[i]);
-            b.field_146124_l=!syncing&&(ids[i]==2||hasSelection);
+            b.field_146124_l=!syncing&&(ids[i]==2||verified&&hasSelection);
             if(ids[i]==5)b.field_146124_l=!syncing&&page>0;
             if(ids[i]==6)b.field_146124_l=!syncing&&(page+1)*rows<visible.size();
             field_146292_n.add(b);
@@ -71,48 +77,75 @@ public final class ManagerGui extends MaintainerScreen {
     private void refresh() {
         try {
             address=BridgeCommand.address(screen.func_146179_b());
-            token=UUID.randomUUID().toString().replace("-","").substring(0,16);
-            incoming.clear();index=0;total=-1;syncing=true;sentAt=0;nextSend=System.currentTimeMillis()+150;
+            if(selected>=0&&selected<visible.size()){
+                selectionKind=visible.get(selected).kind;selectionName=visible.get(selected).name;
+            }
+            endSession();token=UUID.randomUUID().toString().replace("-","").substring(0,16);
+            incoming.clear();index=0;total=-1;protocol=4;syncing=true;verified=false;sentAt=0;
+            startedAt=channel.now();nextSend=startedAt;
             selected=-1;removeArmed=false;status="Reading actual OC configuration...";
             channel.initialize(address);rebuild();
-        }catch(Exception ex) { status="Error: "+ex.getMessage(); }
+        }catch(Exception ex) { syncing=false;verified=false;status="Error: "+ex.getMessage();rebuild(); }
+    }
+    private void endSession(){
+        if(sessionOpen&&token!=null)try{channel.send(address,"LM2|END|"+token);}catch(Exception ignored){}
+        sessionOpen=false;
+    }
+    private void finish(long now){
+        entries.clear();entries.addAll(incoming);syncing=false;verified=true;
+        status="Loaded "+entries.size()+" entries in "+String.format(Locale.ROOT,"%.1fs",(now-startedAt)/1000.0)+".";
+        if(protocol==3)status+=" Update OC scripts for faster sync.";
+        endSession();rebuild();
+        for(int i=0;i<visible.size();i++)if(visible.get(i).kind.equals(selectionKind)&&visible.get(i).name.equals(selectionName)){
+            selected=i;page=i/rows;break;
+        }
+        rebuild();
+        File file=new File(field_146297_k.field_71412_D,"config/nei-level-maintainer.properties");
+        Properties prefs=new Properties();
+        try{
+            if(file.isFile())try(FileInputStream in=new FileInputStream(file)){prefs.load(in);}
+            prefs.setProperty("screen",address);file.getParentFile().mkdirs();
+            try(FileOutputStream out=new FileOutputStream(file)){prefs.store(out,"NEI Level Maintainer");}
+        }catch(IOException ignored){}
     }
     @Override public void func_73876_c() {
         screen.func_146178_a();search.func_146178_a();
         if(!syncing)return;
-        long now=System.currentTimeMillis();
+        long now=channel.now();
         try {
             if(sentAt>0) {
-                ScreenReply reply=ScreenReply.parse(ScreenReader.read(address),token,index);
-                if(reply!=null) {
+                ScreenReply reply=ScreenReply.parse(channel.read(address),token,index);
+                if(reply!=null&&reply.protocol==protocol) {
                     if(total<0)total=reply.total;
                     if(total!=reply.total)throw new IllegalStateException("List changed; refresh again.");
-                    if(reply.entry!=null)incoming.add(reply.entry);
-                    if(index==total) {
-                        entries.clear();entries.addAll(incoming);syncing=false;
-                        status="Loaded "+entries.size()+" entries from OC.";
-                        try { channel.send(address,"LM2|END|"+token); }catch(Exception ignored) { }
-                        rebuild();return;
-                    }
-                    index++;sentAt=0;nextSend=now;status="Reading "+index+" / "+total+"...";
+                    incoming.addAll(reply.entries);
+                    if(reply.complete()){finish(now);return;}
+                    index=reply.nextIndex;sentAt=0;nextSend=now;status="Reading "+incoming.size()+" / "+total+"...";
+                }else if(protocol==4&&index==0&&now-sentAt>=1500){
+                    endSession();protocol=3;token=UUID.randomUUID().toString().replace("-","").substring(0,16);
+                    sentAt=0;nextSend=now;status="Trying the older OC listing protocol...";
                 }else if(now-sentAt>8000)throw new IllegalStateException("No reply. Update OC scripts, run Maintainer and open its screen once.");
             }
             if(sentAt==0 && now>=nextSend) {
-                try { channel.send(address,"LM3|Q|"+token+"|"+address+"|"+index);sentAt=now; }
+                try { channel.send(address,"LM"+protocol+"|Q|"+token+"|"+address+"|"+index);sentAt=now;sessionOpen=true; }
                 catch(IllegalStateException cooldown) { nextSend=now+100; }
             } else if(sentAt>0 && now>=nextSend && now-sentAt>1000) {
                 // Reissue the same page if a dashboard redraw or network update hid it.
-                try { channel.send(address,"LM3|Q|"+token+"|"+address+"|"+index); }catch(IllegalStateException ignored) { }
+                try { channel.send(address,"LM"+protocol+"|Q|"+token+"|"+address+"|"+index); }catch(IllegalStateException ignored) { }
                 nextSend=now+1000;
             }
-        }catch(Exception ex) { syncing=false;status="Sync failed: "+ex.getMessage();rebuild(); }
+        }catch(Exception ex) { syncing=false;verified=false;endSession();status="Sync failed: "+ex.getMessage();rebuild(); }
     }
     @Override protected void func_146284_a(GuiButton button) {
         int id=button.field_146127_k;
         if(id>=100) {selected=page*rows+id-100;removeArmed=false;rebuild();return;}
         if(id==7) {field_146297_k.func_147108_a(null);return;}
-        if(id==1) {refresh();return;}
+        if(id==1) {
+            if(syncing){endSession();syncing=false;status="Refresh cancelled. Click Refresh to load current entries.";rebuild();}
+            else refresh();return;
+        }
         if(syncing)return;
+        if((id==3||id==4||id==8)&&!verified)return;
         address=screen.func_146179_b();
         if(id==2)field_146297_k.func_147108_a(new MaintenanceGui(this,null,address));
         if(id==3 && selected>=0 && selected<visible.size())field_146297_k.func_147108_a(new MaintenanceGui(this,visible.get(selected),address));
@@ -154,7 +187,8 @@ public final class ManagerGui extends MaintainerScreen {
         if(key==Keyboard.KEY_TAB) {input.next(GuiScreen.func_146272_n());return;}
         input.key(ch,key);
         if(!screen.func_146179_b().equals(address)) {
-            address=screen.func_146179_b();syncing=false;entries.clear();selected=-1;removeArmed=false;
+            endSession();address=screen.func_146179_b();syncing=false;verified=false;entries.clear();selected=-1;removeArmed=false;
+            selectionKind=null;selectionName=null;
             status="Screen changed; click Refresh to load its entries.";rebuild();
         }
         String f=search.func_146179_b();
@@ -163,5 +197,12 @@ public final class ManagerGui extends MaintainerScreen {
     @Override protected void func_73864_a(int x,int y,int b) {
         input.click(x,y,b);super.func_73864_a(x,y,b);
     }
-    @Override public void func_146281_b() {if(input!=null)input.close();TextInputBuffer.clear();Keyboard.enableRepeatEvents(false);}
+    @Override public void func_146274_d(){
+        super.func_146274_d();int wheel=Mouse.getEventDWheel();
+        if(!syncing&&wheel!=0){page+=wheel>0?-1:1;selected=-1;removeArmed=false;rebuild();}
+    }
+    @Override public void func_146281_b() {
+        if(syncing){endSession();syncing=false;refreshOnOpen=true;}
+        if(input!=null)input.close();TextInputBuffer.clear();Keyboard.enableRepeatEvents(false);
+    }
 }

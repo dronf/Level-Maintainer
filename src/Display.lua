@@ -500,7 +500,9 @@ end
 function Display.setHeader(parts)
     header = headerParts(parts)
     if active and not suspended and not batching then
-        guarded(drawHeader)
+        guarded(function()
+            if not (Display.clipboardOverlay and Display.clipboardOverlay(gpu)) then drawHeader() end
+        end)
     end
 end
 
@@ -567,7 +569,9 @@ function Display.addLog(line)
         table.remove(Display.history, 1)
     end
     if active and not suspended and not batching then
-        guarded(drawLog)
+        guarded(function()
+            if not (Display.clipboardOverlay and Display.clipboardOverlay(gpu)) then drawLog() end
+        end)
     end
 end
 
