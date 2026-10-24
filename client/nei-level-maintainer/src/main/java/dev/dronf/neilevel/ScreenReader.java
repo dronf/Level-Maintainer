@@ -15,7 +15,12 @@ public final class ScreenReader {
         int w=data.width(),h=data.height();
         if(w<1||h<1||w*h>100000) return "";
         StringBuilder text=new StringBuilder(w*h);
-        for(int y=0;y<h;y++)for(int x=0;x<w;x++)text.appendCodePoint(data.get(x,y));
+        for(int y=0;y<h;y++)for(int x=0;x<w;x++){
+            text.appendCodePoint(data.get(x,y));
+            if(text.length()==5&&!text.toString().matches("LM[234]R\\|"))return "";
+            int n=text.length();
+            if(n>=4&&text.charAt(n-4)=='|'&&text.charAt(n-3)=='E'&&text.charAt(n-2)=='N'&&text.charAt(n-1)=='D')return text.toString();
+        }
         return text.toString();
     }
 }

@@ -78,7 +78,12 @@ $pauseFile=Join-Path $project 'build/pause-test.args'
 [IO.File]::WriteAllLines($pauseFile,@($pauseArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$pauseFile"
 if ($LASTEXITCODE -ne 0) {throw 'Manager pause/resume checks failed'}
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.2.0.jar'
+$syncArgs=@("-Dorg.lwjgl.librarypath=$nativeDir",'-cp',$editorClasspath,'dev.dronf.neilevel.ManagerSyncTest',(Join-Path $project 'build'))
+$syncFile=Join-Path $project 'build/sync-test.args'
+[IO.File]::WriteAllLines($syncFile,@($syncArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
+& $java "@$syncFile"
+if ($LASTEXITCODE -ne 0) {throw 'Manager batched sync checks failed'}
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.3.0.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar

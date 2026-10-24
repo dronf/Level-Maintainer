@@ -62,6 +62,31 @@ public final class ScreenReplyTest {
             }
             check(pausedCount==3);
         }
+        String p4="LM4R|"+t+"|",record="I|436166c3a93b2044757374|||64||1";
+        ScreenReply bulk=ScreenReply.parse(frame(p4+"0|2|2|"+record+";F|5761746572|1|2|3|1.5|0|END"),t,0);
+        check(bulk.entries.size()==2&&bulk.nextIndex==2&&bulk.complete()&&bulk.protocol==4);
+        check(bulk.entries.get(0).name.equals("Caf\u00e9; Dust")&&bulk.entries.get(0).paused);
+        check(ScreenReply.parse(frame(p4+"0|0|0||END"),t,0).complete());
+        check(!ScreenReply.parse(frame(p4+"0|2|1|"+record+"|END"),t,0).complete());
+        check(ScreenReply.parse(frame(p4+"0|2|1|"+record+"|END"),t,1)==null);
+        reject(()->ScreenReply.parse(frame(p4+"0|2|0||END"),t,0));
+        reject(()->ScreenReply.parse(frame(p4+"0|1|2|"+record+";"+record+"|END"),t,0));
+        reject(()->ScreenReply.parse(frame(p4+"0|2|2|"+record+"|END"),t,0));
+        reject(()->ScreenReply.parse(frame(p4+"0|100|65|"+record+"|END"),t,0));
+        reject(()->ScreenReply.parse(frame(p4+"ERR|Screen too small|END"),t,0));
+        String valid=frame(p4+"0|1|1|"+record+"|END");
+        check(ScreenReply.parse(valid.substring(0,valid.length()-1),t,0)==null);
+        check(ScreenReply.parse(valid.replace("64","65"),t,0)==null);
+        for(int a=2;a<args.length;a++){
+            int offset=0,pausedCount=0;Set<String> names=new HashSet<>();
+            List<String> frames=Files.readAllLines(Paths.get(args[a]),StandardCharsets.UTF_8);
+            for(String line:frames){
+                ScreenReply r=ScreenReply.parse(line,t,offset);check(r!=null&&r.protocol==4&&r.total==23);
+                for(MaintainedEntry value:r.entries){check(names.add(value.kind+value.name));if(value.paused)pausedCount++;}
+                offset=r.nextIndex;
+            }
+            check(offset==23&&pausedCount==6&&names.contains("ICaf\u00e9; Dust"));
+        }
         System.out.println("PASS: Screen reply / remove / fluid command checks: "+checks);
     }
 }

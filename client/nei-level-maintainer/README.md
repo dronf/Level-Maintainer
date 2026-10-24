@@ -1,82 +1,74 @@
-# NEI Level Maintainer 1.2.0
+# NEI Level Maintainer 1.3.0
 
-Pause and resume individual items or fluids from **Manage existing entries**.
-Update both the client JAR and the OpenComputers scripts for this feature.
-Minecraft 1.7.10 / GTNH 2.9, NEI 2.8.155-GTNH, OC 1.12.64-GTNH.
+Manage existing entries now loads a batch of entries per clipboard/screen exchange.
+In the 23-entry test, listing exchanges drop from 24 to 1 on an 80x25 or 160x50
+screen, and to 2 on a 50x16 screen. These are measured protocol counts; elapsed
+time in game still depends on server ticks, OC execution and screen synchronization.
 
-## Install the client
+The manager also retains the selected entry after refresh, supports mouse-wheel
+paging, remembers a successfully used screen UUID and shows the completed load
+time. Refresh becomes Cancel while loading. Closing or cancelling sends an END
+request so the dashboard can return promptly; OC's existing clipboard cooldown
+can defer cleanup to the session timeout. A failed or cancelled refresh leaves
+the previous list visible with Edit/Pause/Remove disabled until a fresh load.
 
-1. Close Minecraft in Prism Launcher.
-2. Open the GTNH instance's Minecraft folder, then `mods`.
-3. Remove the previous `nei-level-maintainer-*.jar` and put
-   `nei-level-maintainer-1.2.0.jar` there. Keep exactly one version.
-4. Restart Minecraft. Install the addon on your client only.
+## Install/update
 
-## Update OpenComputers
-
-After the pause-feature PR is merged, press Q to stop Maintainer, change to its
-installation directory (usually `/home`), and run:
+1. Close Minecraft. In Prism, open the GTNH instance's Minecraft folder and its
+   `mods` folder. Replace the old NEI Level Maintainer addon with
+   `nei-level-maintainer-1.3.0.jar`; keep exactly one addon version.
+2. After the batched-manager PR is merged, press Q to stop Maintainer and run
+   this from its OC installation directory (usually `/home`):
 
 ```sh
 wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua installer.lua && installer
 ```
 
-The installer downloads matching versions of Maintainer, `nei_bridge.lua` and
-the `src/` helpers. It keeps existing `config.lua` and `nei_overrides.lua`.
-If it offers a settings refresh, your existing values are preserved and the
-previous settings file is backed up. Let it reboot to clear cached Lua modules.
+3. Let the installer reboot OC to clear cached Lua modules. Existing config,
+   NEI overrides and settings values are preserved. Restart Minecraft with the
+   new client JAR.
 
-Before the PR is merged, use `level-maintainer-oc-1.2.0.zip`: stop Maintainer,
-copy its contents into the OC installation directory, retaining the `src/`
-folder, then reboot OC. That archive contains no `config.lua`, `settings.lua`
-or `nei_overrides.lua`, so it does not replace your entries or settings.
-For a remote server, use the installer after merging; the ZIP is useful when
-you already have access to the OC drive files.
+Update both the JAR and OC scripts to get the faster listing. With the 1.2.0
+receiver, the new client waits 1.5 seconds then falls back to the older per-entry
+listing and suggests updating OC. Updated scripts retain LM1/LM2/LM3 support for
+older clients. Pause/Resume and the earlier keyboard fixes are included.
 
-Do not use the master installer before merging and expect the pause feature:
-it installs master even when installer.lua itself was downloaded from a branch.
+Before merging, `level-maintainer-oc-1.3.0.zip` can be copied into an accessible OC
+drive's installation folder with Maintainer stopped, retaining its `src/` folder.
+Then reboot OC. The ZIP contains no config.lua, settings.lua or nei_overrides.lua.
+The normal master installer installs this change only after the PR is merged.
 
-## Pause and resume
+## Use and test
 
-1. Leave Maintainer running. Open its OC screen once, then close it.
-2. In an inventory/NEI screen press **Left Ctrl+Shift+M**, or use **Left Ctrl+M**
-   on an item and click **Manage existing entries**.
-3. Enter the active GPU's screen UUID and click **Refresh** if needed.
-4. Select an entry and click **Pause**. Wait for the refreshed list.
-5. It stays in the manager with a purple **[Paused]** prefix and shows
-   **paused** in purple on the OC dashboard (color depends on GPU depth).
-6. Select it again and click **Resume** to enable maintenance.
+Open an inventory/NEI screen and press Left Ctrl+Shift+M, or use the entry editor's
+Manage existing entries button. Keep Maintainer running and open its OC screen
+once before syncing. The screen must be bound to that computer's GPU.
 
-Pause prevents new requests and stock checks for that entry. A craft already
-submitted to AE2 continues to completion. The last known stock value can remain
-on screen while paused. Other entries continue normally; nothing is removed.
-Pause is saved in `nei_overrides.lua` and survives OC/server restarts. Amount
-edits and Item/Fluid conversions preserve it, along with refill timing and fluid
-identity. Resume retains Low, Target and Batch. During the same process an active
-refill continues toward Target at the next normal maintenance cycle; after an
-OC process restart, refill activation follows the existing below-Low rule.
+- Refresh a list containing both items and fluids. Check the total, names,
+  amounts and paused flags against OC. Record the displayed load time.
+- Select an entry and pause/resume or edit it. The refreshed selection should
+  remain on that entry, and the OC status should agree.
+- Use Filter, mouse-wheel paging and Prev/Next. Cancel a refresh and refresh
+  again; partial data must not become editable. Close during a refresh and
+  check that the dashboard returns.
+- Try a small/large OC resolution, and verify Add/Edit numeric input and NEI's
+  search text still behave normally.
 
-To configure pause by hand, add `paused = true` to the entry table. An NEI
-override takes precedence over the matching entry in config.lua.
+No server addon or external service is required. Listing reads configuration,
+not ME inventory. This release adds no AE2/CPU polling; batches are capped at
+64 entries and 4,096 characters, and further limited by the actual screen size.
+The receiver takes one frozen configuration snapshot per transfer and reuses it
+for retries. It writes only the reply lines, avoiding a full-screen clear for
+each entry. Header/log updates respect the reply overlay while it is active.
 
-## Test in game
+The client stops reading the screen buffer at the frame terminator and rejects
+an ordinary dashboard after its first five characters. Completed data remains
+nonce/index/checksum validated and replaces the list only after all pages arrive.
+There is no persistent cross-server cache that could expose stale entries.
 
-Use an inexpensive craftable item below its Low value. Pause it, verify the
-purple status, let any existing job finish, and confirm no replacement is
-requested. Resume it and confirm production returns at the next maintenance
-cycle (subject to free CPUs and ingredients). Repeat with a fluid and restart
-OC while paused to check persistence. Editing its amounts must keep it paused.
-Remove remains a separate action with its existing confirmation.
-
-Also check top-row/keypad numbers, Backspace/Delete and Tab in Add/Edit, then
-return to NEI and confirm its search text has not changed. This release includes
-the previous 1.1.5 keyboard fixes and Lua timestamp/display optimizations.
-`headerInterval` defaults to 5 seconds; set it to 1 for smoother cosmetic updates.
-The CPU polling rollback remains in place. Pause adds no extra CPU polling.
-
-Compilation, API linkage, GUI-control, protocol and simulated maintenance tests
-passed; physical in-game keyboard, network/screen synchronization and live AE2
-crafting still need the acceptance test above. See VERIFICATION-1.2.0.md.
+Compilation, API verification and automated protocol/GUI/Lua tests passed.
+Physical gameplay, real network timing and server MSPT have not been measured
+for this version. Details and reproducible tests are in VERIFICATION-1.3.0.md.
 
 ## Open and use the manager
 
@@ -86,7 +78,7 @@ crafting still need the acceptance test above. See VERIFICATION-1.2.0.md.
 - Left Ctrl+M without a hovered item also opens the manager.
 - Enter the OC screen UUID and click **Refresh**. A saved UUID is reused and
   refresh starts automatically when opening the manager.
-- Filter the loaded list by name; use Prev/Next to page. Click a row to select
+- Filter the loaded list by name; use the mouse wheel or Prev/Next to page. Click a row to select
   it, then **Edit**, **Pause/Resume** or **Remove**. Remove requires a second **Confirm?** click.
 - **Add** opens an editor where you can enter an exact display name and choose
   Item or Fluid. Hovering an NEI item prefills its name. Set Low, Target and Batch
@@ -136,7 +128,7 @@ computer at a time. Use Refresh again if another user or update interrupted it.
 
 If sync times out, confirm updated scripts are loaded, Maintainer is running,
 the screen address and GPU binding match, and you have opened the OC screen
-once. Old receivers support updates but cannot list or remove entries. Avoid
+once. The 1.2.0 receiver supports the slower fallback listing; update OC for batched replies. Avoid
 editing until the manager says it loaded the entries from OC.
 
 ## Limits
