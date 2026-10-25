@@ -1,6 +1,6 @@
 # Configuration reference
 
-[Overview](../README.md) Â· [Usage](USAGE.md) Â· [Performance](PERFORMANCE.md)
+[Overview](../README.md) - [Usage](USAGE.md) - [Performance](PERFORMANCE.md)
 
 ## Files and precedence
 
