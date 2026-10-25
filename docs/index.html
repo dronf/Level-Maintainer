@@ -136,6 +136,8 @@
     </button>
   </header>
 
+  <p class="note"><a href="https://github.com/dronf/Level-Maintainer/blob/master/docs/BROWSER-EDITOR.md" target="_blank" rel="noopener noreferrer">Browser editor user guide (GitHub)</a>: worked example, output/paste instructions, backups and NEI override behavior. Save <code>docs/BROWSER-EDITOR.md</code> with the editor for offline instructions.</p>
+
   <section id="share-banner" class="banner hidden" aria-live="polite">
     <p id="share-text"></p>
     <div class="buttons">
@@ -203,7 +205,7 @@
     <div id="status" role="status" aria-live="polite"></div>
     <div class="explain">
       <p><b>Name</b>: the item or fluid exactly as the game shows it. Hover it in NEI and press <kbd>Ctrl+C</kbd> to copy its name, then paste it here with <kbd>Ctrl+V</kbd>. Quotes are optional.</p>
-      <p><b>Maintain</b>: keep at least this many in the ME system (fluids in mB). Leave it empty or 0 to always keep one batch crafting.</p>
+      <p><b>Maintain / Low</b>: trigger threshold (fluids in mB). With Target blank, an empty or 0 Maintain means continuous batches. With Target set, Low 0 is a literal threshold and does not start from nonnegative stock.</p>
       <p><b>Refill target</b>: optional upper stock level. Starts below Low, then refills to Target; Batch caps each request. Low 0 is a real zero threshold in this mode.</p>
       <p><b>Refill interval</b>: optional seconds between active-refill checks (for example 2 or 0.5). Idle checks stay adaptive; other entries keep their schedules. Busy crafts are skipped and failures keep their cooldown.</p>
       <p><b>Batch Amount</b>: how many to request at once.</p>
@@ -228,7 +230,7 @@
         <tbody id="entries"></tbody>
       </table>
     </div>
-    <p class="note">Click an entry to edit it. Untick <b>On</b> to disable an entry: it stays in the list but is written commented out (<code>--</code>), so the maintainer skips it.</p>
+    <p class="note">Click an entry to edit it. Untick <b>On</b> to comment it out (<code>--</code>) in the exported base config. <b>This does not pause or remove an existing NEI override.</b> Use the NEI manager for live Pause/Remove actions.</p>
   </section>
 
   <section>

@@ -141,6 +141,10 @@ possible. Automatic layout restores the old resolution on exit.
 
 ## Browser configuration editor
 
+Follow the [complete browser editor walkthrough](BROWSER-EDITOR.md) for a worked
+example, output modes, transfer to OC, imports/backups, sharing, and the
+difference between disabled browser rows and persistent NEI pause/overrides.
+
 Open [index.html](index.html) in a downloaded repository with config.js beside it.
 Named lists live in browser storage; export backups before clearing site data.
 The editor supports imports, named/positional entries, targets, refill intervals,
