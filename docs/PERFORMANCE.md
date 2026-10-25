@@ -6,6 +6,13 @@ The maintainer submits normal AE2 crafting calculations. Expensive patterns and
 frequent small requests can affect server load. Compare MSPT under equivalent
 workloads; component-call reductions are not live TPS measurements.
 
+There is no enforced OC component tier. Additional RAM helps large entry lists;
+higher-tier GPUs and screens primarily increase display capacity. Faster OC
+execution can reduce script overhead, but does not shorten AE2 processing
+recipes or change configured polling intervals. The
+[component requirements](INSTALLATION.md#requirements) distinguish mandatory
+hardware from the optional internet/redstone cards.
+
 ## Recommended tuning
 
 1. Increase Batch where ingredients, machines and CPU storage permit. Fewer

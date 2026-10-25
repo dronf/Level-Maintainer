@@ -6,13 +6,45 @@
 
 - GTNH 2.9 / Minecraft 1.7.10 with NEI and OpenComputers. Verified client
   dependencies: Forge 10.13.4.1614, NEI 2.8.155-GTNH, OC 1.12.64-GTNH.
-- OC case, CPU, sufficient RAM, hard drive, Lua BIOS EEPROM, GPU, screen and keyboard.
-- OpenOS on the hard drive. Boot an OpenOS floppy, run `install`, select the
-  hard drive, reboot and remove the floppy.
-- An adapter touching a full-block ME interface on the powered AE2 network.
-- Crafting patterns, usable crafting CPUs, ingredients and processing machines.
-  Install Crafting Monitors on CPUs for current-output reporting through OC.
-- An internet card for downloading/updating. Optional redstone card for wake-on-redstone.
+
+The maintainer has **no hardcoded minimum case, CPU, RAM, GPU or screen tier**.
+Choose compatible components that fit the case and can address the attached OC
+component network. For the interactive dashboard and NEI manager:
+
+| Component | Requirement |
+| --- | --- |
+| Case and CPU | A working OC computer; no particular tier is enforced by the script |
+| RAM | Enough memory for OpenOS, the program, maintained entries and listing snapshots; larger lists need more memory |
+| Hard drive | OpenOS plus the installed scripts and configuration files |
+| EEPROM | A Lua BIOS EEPROM to boot OpenOS |
+| GPU and screen | Needed for the dashboard and the NEI manager's screen replies; no fixed tier, with pagination on smaller displays |
+| Keyboard | Attached for normal interactive OC use and the existing clipboard path |
+| Adapter | Connected to the computer's OC network and touching a full-block ME interface |
+| Internet card | Installation and updates only; removable during ordinary maintenance |
+| Redstone card | Optional; only needed for the wake-on-redstone feature |
+
+Install OpenOS by booting its floppy, running `install`, selecting the hard
+drive, rebooting and removing the floppy. Provide normal OC power and a powered
+AE2 network with crafting patterns, suitable crafting CPUs, ingredients and
+processing machines. Install Crafting Monitors on CPUs for reporting active
+outputs through OC. The Java addon remains client-only; none of this requires
+installing it on the server.
+
+No exact minimum RAM capacity has been established for every list size. A lack
+of tier checks does not guarantee that the smallest possible build fits every
+workload. More RAM is useful for larger lists; higher GPU **and screen** capability
+provides more display space. A T3 GPU is sufficient for the graphics tier, but
+the screen can still limit the available resolution.
+
+The default `fit` layout deliberately selects large text according to row count.
+This is not evidence that a T3 GPU failed. Use `fixed` or `columns` to retain
+the screen resolution; overflowing rows are paginated. See [display controls](USAGE.md#dashboard).
+
+Faster OC hardware does not speed up AE2 crafting recipes. Recipe duration is
+determined by the processing machines, while script settings such as `sleep`
+and `refillInterval` determine when maintenance checks are due. OC execution
+and AE2 calculation time can add delays; a hardware upgrade does not change
+the configured intervals or the machines' processing rate.
 
 Keep your GTNH instance's supported Java/runtime setup. Java 8 output bytecode
 does not mean you should downgrade a modern GTNH launcher.
