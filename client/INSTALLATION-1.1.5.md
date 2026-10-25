@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.1.5
 
 Client-only Minecraft 1.7.10 mod built against actual GTNH 2.9 RC2, NEI 2.8.155-GTNH and OpenComputers 1.12.64-GTNH dependencies.

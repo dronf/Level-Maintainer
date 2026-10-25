@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.2.0 verification
 
 Built with JDK 17 `javac --release 8` against the actual GTNH 2.9 RC2 binaries.

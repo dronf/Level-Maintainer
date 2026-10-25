@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.3.1
 
 Ctrl+M now opens Manage existing entries during normal gameplay, without opening

@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # Verification: client 1.1.5
 
 Compiled with Java 17 --release 8 against the real GTNH 2.9 RC2 Minecraft/Forge and installed NEI/OC JARs. Verified 14 Java 8 classes and 1,092 bytecode member references.
