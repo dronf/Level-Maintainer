@@ -2,8 +2,8 @@ local settings = {}
 
 -- Maintainer behaviour. The list of maintained items lives in config.lua.
 -- While the maintainer runs, press E to edit config.lua or S to edit this file.
--- Changes take effect the next time Maintainer starts (no reboot needed), or
--- while it runs if live reload (reloadCheck, at the bottom) is on.
+-- Saving and closing that editor reloads the file. A new Maintainer run also
+-- reads it fresh. R checks external saves; reloadCheck enables periodic checks.
 
 -- Seconds to wait between cycles. Each cycle visits every entry; stocked entries query only when due.
 settings.sleep = 10

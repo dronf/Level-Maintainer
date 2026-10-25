@@ -1,198 +1,36 @@
-# NEI Level Maintainer 1.3.2
+# NEI Level Maintainer client 1.3.3
 
-This update reduces idle AE2 queries, protects script updates against failed
-file replacement, and adds Low/Target/Batch hover explanations to the client editor.
+The client-only Minecraft 1.7.10 addon for the Level Maintainer OC program.
 
-## Install this version
+[Download built JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.3/nei-level-maintainer-1.3.3.jar)
+- [Full project guide](../../README.md)
+- [Install/update](../../docs/INSTALLATION.md)
+- [Controls and manager](../../docs/USAGE.md)
+- [Build and tests](../../docs/DEVELOPMENT.md)
+- [Current verification](VERIFICATION.md)
 
-1. Close Minecraft. In Prism Launcher, open your GTNH instance's Minecraft
-   folder and replace the old NEI Level Maintainer JAR in `mods` with
-   `nei-level-maintainer-1.3.2.jar`. Keep exactly one version of this addon.
-2. On the OC computer, press Q to stop Maintainer. In its installation folder,
-   run these two commands to install the matching scripts, including before
-   the PR is merged into master:
+Close Minecraft and replace the previous addon in Prism's .minecraft/mods folder;
+keep exactly one version. Install this JAR on the client only. Keep the normal
+GTNH NEI/OpenComputers dependencies installed.
 
-```sh
-wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.2/installer.lua installer.lua
-installer nei-level-maintainer-1.3.2
-```
+Ctrl+M in normal gameplay opens the manager. Over an NEI item it opens the entry
+editor; Ctrl+Shift+M always selects the manager in an inventory/NEI screen.
+Either Ctrl key works; release the shortcut. Existing text-entry screens retain
+their own input.
 
-The optional installer argument selects a branch, tag or commit. Omitting it
-continues to install master. Existing config.lua, nei_overrides.lua and settings
-values are retained; settings template refresh still asks before changing it.
-The installer reboots after a successful installation.
+The manager reads actual OC configuration and supports search, paging, Add,
+Edit, Pause/Resume and confirmed Remove. Keep Maintainer running, enter the
+active GPU's screen UUID, open that OC screen once to synchronize its buffer,
+and remain within normal interaction range. A submitted update is not an
+acknowledgement: refresh or check OC.
 
-The Lua improvements also work with client 1.3.1; only the hover explanations
-require the new JAR. Transport and receiver protocols have not changed. This
-remains client-only, using OC's existing clipboard and screen synchronization.
+This release has the same runtime behavior as 1.3.2. Updated documentation,
+build metadata and release packaging identify 1.3.3. Input, hotkeys, hover help,
+pause controls and LM4/legacy listing compatibility are retained. No networking
+crash fix is included.
 
-For future master updates after merge, use the usual command:
-
-```sh
-wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/master/installer.lua installer.lua && installer
-```
-
-## What changed
-
-- When every entry is paused or waiting for its stock/retry/refill deadline,
-  the script skips CPU/job queries. Active entries retain their prior cadence.
-- The header marks a retained CPU count as `(cached)` rather than implying it
-  was just read. An untouched/paused list can show `CPUs: not polled`.
-- Downloads are compiled as Lua without executing them before replacement.
-  All original scripts are kept until every replacement succeeds. On failure,
-  the installer restores the previous scripts and does not reboot. If rollback
-  also fails, it preserves `.install-backup` files and prints recovery paths.
-- Hover Low, Target or Batch in Add/Edit for an explanation of thresholds,
-  request sizing and units. Input, hotkeys, manager listing and pause controls
-  retain their existing behavior.
-
-If an interrupted update reports `.install-backup` files, keep them. Restore
-those originals to their corresponding paths before retrying; the installer
-refuses to overwrite a leftover recovery copy.
-
-## Test in Minecraft
-
-- Open the editor via Ctrl+M over an NEI item, and via Manage existing entries.
-  Hover each numeric field and its label; verify the help stays readable.
-- Check top-row digits, numpad, selection replacement, Backspace/Delete, and
-  Item/Fluid switching. Confirm no text appears in the NEI search bar.
-- With stocked entries, watch the header change to `(cached)` on skipped cycles.
-  Pause all entries, then resume one and confirm maintenance resumes on its
-  normal next cycle. Already submitted AE2 jobs continue while paused.
-- Check a low-stock entry refills to Target and a timed refill keeps its cadence.
-- Run the version-pinned update and confirm your existing entries/settings
-  survive. Automated tests exercise failure recovery without risking your disk.
-
-The API-call reductions are measured in a deterministic test, not a live TPS
-benchmark. Full multiplayer gameplay and rendered tooltip appearance still need
-in-game confirmation. See VERIFICATION-1.3.2.md for automated checks.
-
-## Open and use the manager
-
-- **Ctrl+M** during normal gameplay opens the manager. Either Ctrl key works.
-- **Ctrl+Shift+M** from an inventory or NEI container opens the manager.
-- **Ctrl+M** while hovering an item opens its Add/Edit/Remove editor.
-  The editor's **Manage existing entries** button opens the manager.
-- Ctrl+M without a hovered item also opens the manager.
-- Enter the OC screen UUID and click **Refresh**. A saved UUID is reused and
-  refresh starts automatically when opening the manager.
-- Filter the loaded list by name; use the mouse wheel or Prev/Next to page. Click a row to select
-  it, then **Edit**, **Pause/Resume** or **Remove**. Remove requires a second **Confirm?** click.
-- **Add** opens an editor where you can enter an exact display name and choose
-  Item or Fluid. Hovering an NEI item prefills its name. Set Low, Target and Batch
-  and click Save to OC. Existing names are fixed; the Item/Fluid button can change type.
-- After saving, return to the manager; it refreshes the actual OC state. An
-  editor submission alone is not a server acknowledgement. Confirm Updated or
-  Removed on OC, or refresh and check the entry in the manager.
-
-Remove stops maintaining the entry even if it came from `config.lua`. It stores
-`["name"]=false` in the appropriate override section, masking the base entry
-without rewriting your config file. The deletion survives restart. Adding the
-same name and type again replaces that marker and re-enables maintenance.
-Keep the updated OC scripts while deletion markers exist; older receivers do
-not understand them.
-To restore the original base configuration instead, stop Maintainer and remove
-that false marker from `nei_overrides.lua`, then restart.
-
-Editing quantities preserves an existing entry's native `fluidName` and
-`refillInterval`. Legacy configs with no Target are listed as `legacy`; the
-editor requires you to choose an explicit Target when converting them to
-Low/Target mode. Re-adding a removed entry creates a new explicit override.
-
-## Screen UUID and sync requirements
-
-To get the screen UUID, stop Maintainer, run `lua`, then enter:
-
-```lua
-for a in require("component").list("screen") do print(a) end
-```
-
-Press Ctrl+D to exit Lua and run `Maintainer` again. Use the screen address,
-not the computer/GPU/keyboard address. Keep its keyboard attached. Open the OC
-screen normally once so the client has its buffer, then close it and use NEI.
-Stand close enough to use that screen normally, with normal OC permissions.
-
-The listing request uses OC's existing clipboard path. Its response is ASCII
-text briefly drawn on the GPU's bound screen and read from OC's existing client
-screen buffer. During sync the dashboard briefly shows protocol text. Normal
-display returns when sync finishes or the session expires (five seconds after
-the last request, on the next dashboard redraw). Maintenance keeps running.
-The entered screen must be the one bound to the computer's active GPU.
-
-Replies are paginated, nonce-matched and protected with an Adler-32 checksum so
-stale or partially synchronized screen data is not accepted as configuration.
-A frozen snapshot keeps pagination consistent. One client can sync with a
-computer at a time. Use Refresh again if another user or update interrupted it.
-
-If sync times out, confirm updated scripts are loaded, Maintainer is running,
-the screen address and GPU binding match, and you have opened the OC screen
-once. The 1.2.0 receiver supports the slower fallback listing; update OC for batched replies. Avoid
-editing until the manager says it loaded the entries from OC.
-
-## Limits
-
-Names match display names, not registry IDs or NBT; identical display names
-collide. Names must be 1-160 UTF-8 bytes, without pipes or control characters.
-The manager omits unsupported names and malformed non-table config entries.
-It lists items and fluids; adding a fluid requires its exact configured display
-name. The ME setup must support the corresponding craftable item/fluid.
-
-New quantities are integers from 0 to 10^12, Low <= Target and Batch >= 1.
-The manager reads current quantities; the hover editor initially uses saved
-local defaults. Use the manager's Edit action to prefill an existing entry's
-current values. The list supports up to 10,000 entries; synchronization of large
-lists takes time. Exceptionally small screen resolutions may not fit a response.
-Keyboard navigation, Ctrl+V, Tab and Shift+Tab are available in the entry editor.
-Cancel closes the editor without submitting; containers are closed normally.
-
-## Gameplay acceptance test
-
-1. With Maintainer running, open Ctrl+Shift+M and Refresh. Verify entries from
-   config.lua and previous NEI overrides appear, including a fluid if configured.
-2. Edit an inexpensive craftable item's Low/Target/Batch. Refresh and verify the
-   new values. Confirm its existing refill timing is retained.
-3. Remove it, confirm, and verify it disappears from both the manager's refreshed
-   list and the OC dashboard. Restart OC and verify it remains removed, including
-   when it originally came from config.lua.
-4. Add it again from NEI and verify it returns and ordinary crafting resumes.
-5. Test Filter, Prev/Next, Cancel, invalid numbers, and a wrong screen UUID.
-
-## Build and verification
-
-See VERIFICATION.md. Automated compilation, binary API checks, Java/Lua protocol
-tests and real Maintainer main-loop tests have passed. This new GUI/screen-sync
-version has not been gameplay-tested in Minecraft.
-
-Build using PowerShell, JDK 17 (emitting Java 8 bytecode), your exact pack JARs,
-Prism's library directory and a Minecraft 1.7.10 SRG merged JAR from a
-RetroFuturaGradle workspace (`build/rfg/srg_merged_minecraft.jar`). Dependency
-JARs are not redistributed. Source uses production SRG names directly.
-
-```powershell
-./tools/build.ps1 -MinecraftSrgJar '<SRG Minecraft.jar>' `
-  -ForgeJar '<Forge universal.jar>' -ModsDirectory '<instance>/.minecraft/mods' `
-  -LibrariesDirectory '<Prism>/libraries' -JdkDirectory '<JDK 17>' `
-  -OutputDirectory '<output directory>'
-./tools/verify.ps1 -Jar '<compiled.jar>' -MinecraftSrgJar '<SRG Minecraft.jar>' `
-  -ForgeJar '<Forge universal.jar>' -ModsDirectory '<instance>/.minecraft/mods' `
-  -LibrariesDirectory '<Prism>/libraries' -AsmJar '<asm-9.8.jar>' `
-  -JdkDirectory '<JDK 17>'
-```
-
-Lua tests run from the Level-Maintainer repository root using Lua 5.2+:
-
-```sh
-lua tests/nei-manager.lua frames.txt
-lua tests/nei-bridge.lua
-lua tests/maintenance.lua
-lua tests/refill-interval.lua
-lua tests/installer.lua
-lua tests/settings.lua
-lua tests/display.lua
-```
-
-The first command can emit real simulated GPU frames for Java's ScreenReplyTest:
-
-```sh
-java -cp "build/classes;build/tests" dev.dronf.neilevel.ScreenReplyTest frames.txt
-```
+The build uses JDK 17 --release 8 against actual GTNH 2.9 RC2 SRG Minecraft,
+Forge 10.13.4.1614, NEI 2.8.155-GTNH and OC 1.12.64-GTNH dependencies. Run
+tools/build.ps1 and tools/verify.ps1 with your local pack paths as shown in the
+development guide. Tests use real Minecraft classes with synthetic input and
+simulated OC/AE2 responses; full pack gameplay and TPS remain separate checks.

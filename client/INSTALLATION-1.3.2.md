@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.3.2
 
 This update reduces idle AE2 queries, protects script updates against failed

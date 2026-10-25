@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.2.0
 
 Pause and resume individual items or fluids from **Manage existing entries**.

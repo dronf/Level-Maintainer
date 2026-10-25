@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.1.3
 
 Close Minecraft. Replace the older NEI Level Maintainer JAR in the Prism instance mods folder with nei-level-maintainer-1.1.3.jar, then restart Minecraft. Keep exactly one copy.

@@ -1,3 +1,5 @@
+> Historical release record for the version named below. For current commands and behavior, use the [project guides](../README.md).
+
 # NEI Level Maintainer 1.3.0
 
 Manage existing entries now loads a batch of entries per clipboard/screen exchange.
