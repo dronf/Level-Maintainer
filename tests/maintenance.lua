@@ -101,7 +101,9 @@ package.preload["src.Utility"] = function()
 end
 loadfile = function(path)
     if path:match("settings.lua$") then return function()
-        return {sleep = 10, display = "log"}
+        -- Explicit fast settings exercise legacy cadence independently of defaults.
+        return {sleep = 10, display = "log", retryDelay = 60,
+            thresholdIntervals = {15, 30, 60, 120, 300}}
     end end
     if path:match("config.lua$") then return function() return config end end
     return realLoadfile(path)

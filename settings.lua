@@ -5,24 +5,26 @@ local settings = {}
 -- Saving and closing that editor reloads the file. A new Maintainer run also
 -- reads it fresh. R checks external saves; reloadCheck enables periodic checks.
 
--- Seconds to wait between cycles. Each cycle visits every entry; stocked entries query only when due.
-settings.sleep = 10
+-- Low-load defaults favor fewer server calls over quick replenishment.
+-- Seconds after each ordinary pass; stocked entries query only when due.
+settings.sleep = 60
 
 -- Seconds between table header/countdown updates. Cosmetic only: does not
--- change crafting, stock checks or refill deadlines. 1 = smoother, 5 = cheaper.
-settings.headerInterval = 5
+-- change crafting, stock checks or refill deadlines. 60 = one cosmetic update/minute.
+settings.headerInterval = 60
 
 -- Stock/low ratios <1.25, <2, <5, <10, and otherwise.
 -- Seconds between targeted stock checks; 0 = check each cycle.
--- Sudden consumption can delay replenishment by this interval plus one cycle.
-settings.thresholdIntervals = {15, 30, 60, 120, 300}
+-- Defaults: 5, 10, 15, 30 and 60 minutes. Sudden consumption can wait this
+-- interval plus a cycle/pass; lower these only for time-critical supplies.
+settings.thresholdIntervals = {300, 600, 900, 1800, 3600}
 
 -- After a crafting request fails (missing ingredients, no suitable CPU, ...),
 -- wait this many seconds before calculating that entry again.
 -- Other entries are unaffected. 0 = retry every cycle.
 -- Also the pause before the maintainer restarts itself after an unexpected
 -- error (at least 5 seconds).
-settings.retryDelay = 60
+settings.retryDelay = 300
 
 -- Only start a calculation when a crafting CPU is idle (or the CPU named in
 -- cpuName, if set). AE2 otherwise calculates the whole craft and then fails
@@ -36,14 +38,15 @@ settings.cpuName = nil
 -- How long craftable lookups are cached, in seconds. An entry that is not
 -- craftable yet is picked up after at most this long once its pattern is
 -- added in AE2 (or straight away when the maintainer is restarted).
-settings.cacheDuration = 600
+settings.cacheDuration = 3600
 
 -- How often to check whether AE2 has finished calculating a request, in seconds.
-settings.pollInterval = 1
+-- Longer waits reduce status polling but delay processing the next entry.
+settings.pollInterval = 5
 
 -- Log entries that are skipped because they are already crafting, above
 -- their threshold, waiting to retry, or waiting for a free CPU.
-settings.logSkips = true
+settings.logSkips = false
 
 -- Show everything that happens, every cycle, in the Recent panel of the status
 -- table (stocked, crafting, waiting for a CPU, retry waits, ...). false = each

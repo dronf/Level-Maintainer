@@ -13,11 +13,28 @@ recipes or change configured polling intervals. The
 [component requirements](INSTALLATION.md#requirements) distinguish mandatory
 hardware from the optional internet/redstone cards.
 
+## Default low-load profile
+
+The 1.3.4 template and runtime fallbacks use sleep=60, headerInterval=60,
+retryDelay=300, cacheDuration=3600, pollInterval=5 and
+thresholdIntervals={300,600,900,1800,3600}. logSkips=false, logRepeats=false,
+requireFreeCpu=true and reloadCheck=0 avoid optional repeated work. Fresh config
+contains no active entries and no fast refillInterval by default.
+
+These are deliberately infrequent checks, not a measured universal optimum.
+A stocked item may wait up to its 5-60 minute interval plus a cycle/pass after
+sudden consumption. Failed jobs retry after five minutes. Pattern changes can
+remain cached for an hour; restart Maintainer for immediate discovery. Polling
+an in-progress calculation every five seconds can delay the next entry.
+
+Updates preserve existing saved values, so accepting a template refresh does
+not by itself adopt the new timings. See [the opt-in settings block](INSTALLATION.md#update-later).
+
 ## Recommended tuning
 
 1. Increase Batch where ingredients, machines and CPU storage permit. Fewer
    large requests usually require fewer calculations than many tiny requests.
-2. Increase sleep, for example from 10 to 20-30 seconds, if slower response is acceptable.
+2. The default sleep is 60 seconds. Increase it further if slower response is acceptable; lower it only for faster replenishment.
 3. Keep requireFreeCpu=true to avoid calculations with no idle CPU in the snapshot.
    Disabling it does not remove job-detection queries.
 4. Retain or lengthen adaptive thresholdIntervals for noncritical stock. Sudden
@@ -43,7 +60,7 @@ hardware from the optional internet/redstone cards.
   jobs for the same label.
 - Filesystem wall-clock sampling once per minute, advanced using uptime between samples.
 - GPU metadata reused within a guarded draw, redundant foreground changes skipped.
-- Cosmetic headers every five seconds by default, separate from maintenance.
+- Cosmetic headers every 60 seconds by default, separate from maintenance.
 - Manager replies batched within screen area, 64-entry and 4,096-character limits.
 
 The additional CPU-rescan approach was rolled back. This package does not restore

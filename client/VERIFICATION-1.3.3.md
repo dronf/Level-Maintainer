@@ -1,3 +1,5 @@
+> Historical release record. For current defaults and setup, use the [project guide](../README.md).
+
 # NEI Level Maintainer 1.3.3 verification
 
 Built 2026-10-24. JAR: nei-level-maintainer-1.3.3.jar

@@ -36,7 +36,7 @@ $deps = @{
   JdkDirectory = 'C:/Program Files/Java/jdk-17'
 }
 ./tools/build.ps1 @deps -OutputDirectory 'C:/build/release'
-./tools/verify.ps1 @deps -Jar 'C:/build/release/nei-level-maintainer-1.3.3.jar' -AsmJar 'C:/build/asm-9.8.jar'
+./tools/verify.ps1 @deps -Jar 'C:/build/release/nei-level-maintainer-1.3.4.jar' -AsmJar 'C:/build/asm-9.8.jar'
 ```
 
 Replace example paths with your actual installation. build.ps1 currently expects
@@ -58,6 +58,7 @@ lua tests/maintenance.lua
 lua tests/refill-interval.lua
 lua tests/pause.lua
 lua tests/idle-polling.lua
+lua tests/defaults.lua
 lua tests/installer.lua
 lua tests/settings.lua
 lua tests/display.lua

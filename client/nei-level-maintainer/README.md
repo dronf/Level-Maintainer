@@ -1,8 +1,8 @@
-# NEI Level Maintainer client 1.3.3
+# NEI Level Maintainer client 1.3.4
 
 The client-only Minecraft 1.7.10 addon for the Level Maintainer OC program.
 
-[Download built JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.3/nei-level-maintainer-1.3.3.jar)
+[Download built JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.4/nei-level-maintainer-1.3.4.jar)
 - [Full project guide](../../README.md)
 - [Install/update](../../docs/INSTALLATION.md)
 - [Controls and manager](../../docs/USAGE.md)
@@ -24,8 +24,10 @@ active GPU's screen UUID, open that OC screen once to synchronize its buffer,
 and remain within normal interaction range. A submitted update is not an
 acknowledgement: refresh or check OC.
 
-This release has the same runtime behavior as 1.3.2. Updated documentation,
-build metadata and release packaging identify 1.3.3. Input, hotkeys, hover help,
+The client behavior matches 1.3.3; Lua 1.3.4 supplies the new low-load defaults
+and empty starting config. Existing saved timings are preserved. Updating the
+scripts provides these defaults; a new client JAR is optional for users of 1.3.3.
+Input, hotkeys, hover help,
 pause controls and LM4/legacy listing compatibility are retained. No networking
 crash fix is included.
 

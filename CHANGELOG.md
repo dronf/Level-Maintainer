@@ -5,6 +5,19 @@
 Versioned installation/verification notes are historical records for their
 named versions. Use the current guides for present-day commands and behavior.
 
+## 1.3.4 - 2026-10-25
+
+- Default to a 60-second ordinary cycle and header, 300-second retry delay,
+  3,600-second craftable cache and five-second computation polling.
+- Stocked checks default to 300/600/900/1,800/3,600 seconds by stock ratio.
+- Disable skip logging by default; retain free-CPU gating and disabled live reload.
+- Fresh config starts empty, with only commented opt-in examples.
+- Synchronize shipped defaults, runtime fallbacks and invalid-interval fallbacks.
+- Add bold setup guidance explaining deliberately low polling frequency and slow
+  replenishment. Document adopting the profile without overwriting user settings.
+- Preserve explicit old/custom timings and fast per-entry refill opt-ins. No
+  clipboard or Java client behavior change; version-matched JAR included.
+
 ## 1.3.3 - 2026-10-24
 
 - Reorganize full project documentation: installation, operation, configuration,
