@@ -11,6 +11,23 @@ crafting, polling, clipboard, and keyboard behavior as 1.3.2.
 - [Client JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.3/nei-level-maintainer-1.3.3.jar)
 - [Changelog](CHANGELOG.md)
 
+## OpenComputers hardware
+
+The script does not enforce a particular case, CPU, RAM or GPU tier. For the
+interactive dashboard and NEI manager, use a case with CPU, enough RAM, a hard
+drive containing OpenOS, a Lua BIOS EEPROM, GPU, screen and keyboard. Connect
+an OC adapter touching a full-block ME interface on the powered AE2 network.
+
+An internet card is needed only for installation/updates and can be removed
+afterward. A redstone card is optional, for wake-on-redstone. AE2 also needs
+crafting patterns and usable crafting CPUs with Crafting Monitors for reporting
+active outputs. See the [complete component table](docs/INSTALLATION.md#requirements).
+
+More RAM helps larger maintained lists. Higher-tier GPUs and screens provide
+more display space; smaller displays use pagination. The default fit layout
+intentionally uses large text, even with a T3 GPU. Faster OC hardware does not
+speed up AE2 recipes; processing machines and maintenance timing remain separate.
+
 ## Quick start
 
 1. Install OpenOS on an OC computer. Connect an adapter to a full-block ME
