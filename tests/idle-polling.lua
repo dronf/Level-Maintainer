@@ -68,7 +68,8 @@ local function simulate(mode)
     os.sleep = function(dt) now = now + dt end
     loadfile = function(p)
         if p:match("config.lua$") then return config end
-        if p:match("settings.lua$") then return function() return {sleep = 10, display = "table"} end end
+        if p:match("settings.lua$") then return function() return {sleep = 10, display = "table",
+            thresholdIntervals = {15, 30, 60, 120, 300}} end end
         return realLoadfile(p)
     end
     assert(realLoadfile("Maintainer.lua"))()

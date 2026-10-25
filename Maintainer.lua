@@ -43,14 +43,14 @@ end
 -- Defaults for anything missing from settings.lua (e.g. an older install without it)
 local function buildSettings(userSettings, cfg)
     local s = {
-        sleep = (cfg and cfg.sleep) or 10,
-        headerInterval = 5,
-        retryDelay = 60,
+        sleep = (cfg and cfg.sleep) or 60,
+        headerInterval = 60,
+        retryDelay = 300,
         requireFreeCpu = true,
         cpuName = nil,
-        cacheDuration = 600,
-        pollInterval = 1,
-        logSkips = true,
+        cacheDuration = 3600,
+        pollInterval = 5,
+        logSkips = false,
         logRepeats = false,
         utcOffset = 0,
         reloadCheck = 0, -- live reload off; most players can't edit the file outside the game
@@ -58,7 +58,7 @@ local function buildSettings(userSettings, cfg)
         showRecent = true,
         layout = "fit",
         cpuDisplay = "free",
-        thresholdIntervals = {15, 30, 60, 120, 300},
+        thresholdIntervals = {300, 600, 900, 1800, 3600},
     }
     for k, v in pairs(userSettings or {}) do
         s[k] = v
@@ -170,7 +170,7 @@ local function thresholdDelay(amount, threshold)
     local intervals = settings.thresholdIntervals
     local delay = type(intervals) == "table" and tonumber(intervals[tier])
     if not delay or delay ~= delay or delay == math.huge or delay < 0 then
-        delay = ({15, 30, 60, 120, 300})[tier]
+        delay = ({300, 600, 900, 1800, 3600})[tier]
     end
     return delay
 end
@@ -633,7 +633,7 @@ local KEY_UP, KEY_DOWN, KEY_PAGE_UP, KEY_PAGE_DOWN = 0xC8, 0xD0, 0xC9, 0xD1
 local function idle(timeout)
     local deadline = computer.uptime() + timeout
     local interval = tonumber(settings.headerInterval)
-    if not interval or interval ~= interval or interval <= 0 or interval == math.huge then interval = 5 end
+    if not interval or interval ~= interval or interval <= 0 or interval == math.huge then interval = 60 end
     repeat
         local wait = math.max(0, deadline - computer.uptime())
         local countdown = nextCycleAt ~= nil and display.isActive()

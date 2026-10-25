@@ -5,6 +5,7 @@ local function simulate(options)
     local amounts = {Fast = options.stock or 90, Other = 1000}
     local reads, requests, jobs, snapshots, headers = {}, {}, {}, {}, {}
     local settings = {sleep = 10, display = options.table and "table" or "log", retryDelay = 60,
+        pollInterval = 1, thresholdIntervals = {15, 30, 60, 120, 300},
         headerInterval = options.headerInterval,
         cpuName = options.named and "test" or nil, reloadCheck = options.reloadCheck or 0}
     local policy = options.policy or {low = 100, target = 250, batch = 40, refillInterval = 3}
@@ -163,6 +164,6 @@ assert(#passive == 3 and passive[1] == 0 and passive[2] == 10 and passive[3] == 
 times(simulate{table = true, headerInterval = 5, duration = 0}, {0, 3, 6, 9})
 for _, invalid in ipairs{0, -1, "bad", math.huge, 0/0} do
     local _, _, _, _, events = simulate{table = true, headerInterval = invalid, stock = 1000, stop = 11}
-    assert(#events == 2 and events[1] == 5 and events[2] == 10)
+    assert(#events == 1 and events[1] == 10, "invalid header interval must use the low-load fallback")
 end
 print("PASS: configurable header cadence, validation and unchanged crafting/refill schedules")

@@ -92,7 +92,7 @@ when the interface lacks getFluidInNetwork; full native-fluid support targets 2.
 ```lua
 cfg.items["Osmium Dust"] = {
     low = 10000, target = 20000, batch = 1000,
-    refillInterval = 2, paused = true,
+    refillInterval = 30, paused = true,
 }
 ```
 
@@ -112,15 +112,15 @@ setting them; use Lua or the browser editor.
 
 | Setting | Default | Behavior |
 | --- | --- | --- |
-| sleep | 10 | Seconds waiting after an ordinary pass; execution time is additional |
-| headerInterval | 5 | Cosmetic clock/countdown cadence; does not change refill deadlines |
-| thresholdIntervals | {15,30,60,120,300} | Stocked delays for stock/Low ratios <1.25, <2, <5, <10, otherwise |
-| retryDelay | 60 | Failed-request retry seconds; 0 retries next cycle; unexpected-error restart waits at least 5 seconds |
+| sleep | 60 | Seconds waiting after an ordinary pass; execution time is additional |
+| headerInterval | 60 | Cosmetic clock/countdown cadence; does not change refill deadlines |
+| thresholdIntervals | {300,600,900,1800,3600} | Stocked delays for stock/Low ratios <1.25, <2, <5, <10, otherwise |
+| retryDelay | 300 | Failed-request retry seconds; 0 retries next cycle; unexpected-error restart waits at least 5 seconds |
 | requireFreeCpu | true | Gate calculations on idle CPU snapshot |
 | cpuName | nil | Exact CPU name for requests; ensure it exists and fits the job; nil lets AE2 choose |
-| cacheDuration | 600 | Craftable and negative-lookup cache lifetime; restart to discover changed patterns immediately |
-| pollInterval | 1 | Seconds between checks while AE2 calculates a request |
-| logSkips | true | Log stocked, crafting, no-CPU and retry skips |
+| cacheDuration | 3600 | Craftable and negative-lookup cache lifetime; restart to discover changed patterns immediately |
+| pollInterval | 5 | Seconds between checks while AE2 calculates a request; longer waits delay subsequent entries too |
+| logSkips | false | Log stocked, crafting, no-CPU and retry skips |
 | logRepeats | false | Repeat unchanged statuses in table Recent; log mode remains deduplicated |
 | utcOffset | 0 | Hours added to UTC; adjust manually for daylight saving |
 | display | "table" | Status table; "log" selects scrolling log |

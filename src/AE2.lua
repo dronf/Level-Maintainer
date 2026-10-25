@@ -37,8 +37,8 @@ local itemCache = {}
 local cacheTimestamp = 0
 
 -- Overridden from settings.lua via AE2.configure()
-local cacheDuration = 600
-local pollInterval = 1
+local cacheDuration = 3600
+local pollInterval = 5
 local cpuName = nil
 
 function AE2.configure(settings)

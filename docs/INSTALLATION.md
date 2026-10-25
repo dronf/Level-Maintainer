@@ -51,17 +51,23 @@ does not mean you should downgrade a modern GTNH launcher.
 
 ## Install the release scripts
 
+**The default polling frequency is deliberately very low to minimize server
+load. Ordinary maintenance runs once per minute, and stocked-item checks are
+spaced 5-60 minutes apart. Replenishment can therefore be slow; lower the timing
+intervals in settings.lua if you need a faster response.**
+
 Use one OC directory, normally /home, for the program and its data. Run:
 
 ```sh
-wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.3/installer.lua installer.lua
-installer nei-level-maintainer-1.3.3
+wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.4/installer.lua installer.lua
+installer nei-level-maintainer-1.3.4
 ```
 
 The installer selects the tag's commit to download one matching script set. It
 installs Maintainer.lua, nei_bridge.lua and four src/ modules. Missing config.lua
-and settings.lua are fetched; existing files are retained. Review the fresh
-config.lua's example entries and replace them with your own craftable labels.
+and settings.lua are fetched; existing files are retained. The fresh config.lua
+has empty items/fluids sections and commented examples.
+Add only the labels you need; a new install makes no AE2 requests until then.
 
 If settings explanations/defaults changed, it offers to refresh settings.lua
 while preserving values and saving settings.lua.old. Declining preserves the
@@ -74,8 +80,8 @@ Run `Maintainer` from its installation directory if auto-start is off. Stop with
 
 ## Install the client JAR in Prism
 
-1. Download `nei-level-maintainer-1.3.3.jar` from the
-   [release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.3.3).
+1. Download `nei-level-maintainer-1.3.4.jar` from the
+   [release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.3.4).
 2. Close Minecraft. Select the Prism instance and open its Minecraft folder.
 3. Replace the previous NEI Level Maintainer addon in `.minecraft/mods`.
    Keep exactly one addon version, plus the normal NEI/OC dependencies.
@@ -86,7 +92,7 @@ config.lua.example and settings.lua.example so extraction does not replace your
 existing configuration. Check downloads against the release's SHA256SUMS file:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath 'C:/Downloads/nei-level-maintainer-1.3.3.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath 'C:/Downloads/nei-level-maintainer-1.3.4.jar'
 ```
 
 ## Screen UUID
@@ -124,8 +130,28 @@ The optional installer argument accepts a branch, tag or commit; omission means
 master. Download the installer from the same ref when testing an unmerged build.
 Restart OC after updates to refresh cached modules/listeners.
 
-1.3.3 has the same runtime behavior as 1.3.2, with updated documentation/version
-metadata. Existing 1.3.2 scripts already provide those runtime improvements.
+The low-load defaults are supplied by 1.3.4 scripts; the client clipboard
+protocol is unchanged and an existing 1.3.3 JAR remains compatible. The release
+includes a version-matched JAR for convenience.
+
+**Existing settings are preserved, even if you accept a settings-template refresh.**
+To adopt this profile on an existing computer, press S and set these values,
+then save with Ctrl+S and close with Ctrl+W:
+
+```lua
+settings.sleep = 60
+settings.headerInterval = 60
+settings.thresholdIntervals = {300, 600, 900, 1800, 3600}
+settings.retryDelay = 300
+settings.cacheDuration = 3600
+settings.pollInterval = 5
+settings.logSkips = false
+settings.requireFreeCpu = true
+```
+
+Keep reloadCheck=0 and logRepeats=false for reduced background work. Optional
+per-entry refillInterval values still take precedence during active refills;
+remove or lengthen them if you also want those entries to use the slow cycle.
 
 ## Failed update recovery
 

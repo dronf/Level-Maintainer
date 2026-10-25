@@ -1,3 +1,5 @@
+> Historical release record. For current defaults and setup, use the [project guide](../README.md).
+
 # NEI Level Maintainer 1.3.3 installation
 
 Use the [complete installation and update guide](../docs/INSTALLATION.md).

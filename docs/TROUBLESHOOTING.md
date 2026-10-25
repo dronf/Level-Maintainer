@@ -50,7 +50,9 @@ not show whether a submitted update was acknowledged by OC.
 Stock is sampled, not live; gray is an older observation. Partial craft output
 may accumulate before the next stock check. Want shows Low while idle and Target
 while refilling. Stock >= Low is satisfied unless refill was already active.
-Restarting resets refill state. Low 0 does not trigger at zero.
+Restarting resets refill state. Low 0 does not trigger at zero. The 1.3.4 low-load profile intentionally checks
+stocked entries only every 5-60 minutes; slow detection can be expected behavior.
+Lower thresholdIntervals/sleep for critical stock.
 See [examples](CONFIGURATION.md#low--target--batch).
 
 CPU counts are snapshots, labelled cached on skipped passes. The script does
@@ -60,7 +62,7 @@ CPU size and Crafting Monitor current-output reporting. An idle CPU may not fit 
 ## Not craftable, failed request or no link
 
 Check the exact label, pattern visibility and network connection. Both hits and
-missing craftables are cached up to cacheDuration, default 600 seconds. Restart
+missing craftables are cached up to cacheDuration, default 3,600 seconds. Restart
 Maintainer to clear the cache immediately after changing patterns; R alone
 checks saved file changes.
 
