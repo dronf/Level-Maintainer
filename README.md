@@ -66,6 +66,7 @@ downloads, not ordinary maintenance.
 | [Installation and updates](docs/INSTALLATION.md) | Hardware, OpenOS, Prism, screen UUID, pinned/master updates, backups and recovery |
 | [Using the manager and dashboard](docs/USAGE.md) | Shortcuts, add/edit/remove, persistent pause, search, paging and status display |
 | [Configuration reference](docs/CONFIGURATION.md) | Low/Target/Batch, continuous production, items/fluids and every setting |
+| [Browser editor walkthrough](docs/BROWSER-EDITOR.md) | Worked example, lists, output modes, OC paste chunks, imports/backups, sharing and override conflicts |
 | [Performance](docs/PERFORMANCE.md) | Server-load tuning, measured API calls, listing speed and polling tradeoffs |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Input, save/sync errors, missing patterns, stale stock, CPUs and crash reports |
 | [Development and validation](docs/DEVELOPMENT.md) | Production build, real dependency verification, tests and release packaging |
