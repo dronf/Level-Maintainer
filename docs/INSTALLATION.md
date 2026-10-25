@@ -1,6 +1,6 @@
 # Installation and updates
 
-[Overview](../README.md) Â· [Usage](USAGE.md) Â· [Troubleshooting](TROUBLESHOOTING.md)
+[Overview](../README.md) - [Usage](USAGE.md) - [Troubleshooting](TROUBLESHOOTING.md)
 
 ## Requirements
 

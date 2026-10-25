@@ -8,8 +8,8 @@ resume, and remove entries from Minecraft without editing Lua by hand.
 crafting, polling, clipboard, and keyboard behavior as 1.3.2.
 
 [Download release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.3.3)
-Â· [Client JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.3/nei-level-maintainer-1.3.3.jar)
-Â· [Changelog](CHANGELOG.md)
+- [Client JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.3/nei-level-maintainer-1.3.3.jar)
+- [Changelog](CHANGELOG.md)
 
 ## Quick start
 
