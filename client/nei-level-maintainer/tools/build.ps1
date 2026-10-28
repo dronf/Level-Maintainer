@@ -88,7 +88,7 @@ $hotkeyFile=Join-Path $project 'build/hotkey-test.args'
 [IO.File]::WriteAllLines($hotkeyFile,@($hotkeyArgs | ForEach-Object {'"'+$_.Replace('\','/')+'"'}),[Text.UTF8Encoding]::new($false))
 & $java "@$hotkeyFile"
 if ($LASTEXITCODE -ne 0) {throw 'Gameplay and NEI hotkey lifecycle checks failed'}
-$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.3.4.jar'
+$outputJar = Join-Path $OutputDirectory 'nei-level-maintainer-1.4.0.jar'
 & $jar "-J-Djava.io.tmpdir=$project/build" cf $outputJar -C $classes dev -C (Join-Path $project 'src/main/resources') mcmod.info
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -Algorithm SHA256 -LiteralPath $outputJar

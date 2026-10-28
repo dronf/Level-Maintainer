@@ -5,6 +5,20 @@
 Versioned installation/verification notes are historical records for their
 named versions. Use the current guides for present-day commands and behavior.
 
+## 1.4.0 - 2026-10-28
+
+- Register context-sensitive editor/manager and independent manager bindings in
+  Minecraft Controls. The manager binding starts unbound to avoid new conflicts.
+- Add a Shortcuts screen for choosing keyboard keys and NONE/CTRL/ALT/SHIFT
+  modifiers, with immediate saving and unbinding.
+- Match modifiers explicitly, so modifier NONE does not trigger with Ctrl held.
+  Preserve default Ctrl+M/Ctrl+Shift+M, release/repeat protection, NEI input
+  isolation and screen/world-change cancellation.
+- Use the configured key in both gameplay and NEI. Modifier-only and mouse
+  primary bindings are ignored. Keep key codes in options.txt and modifiers
+  in a separate properties file so saved UUID/numeric defaults cannot erase them.
+- No Lua, transport, polling or AE2 scheduling changes; existing scripts work.
+
 ## 1.3.4 - 2026-10-25
 
 - Default to a 60-second ordinary cycle and header, 300-second retry delay,

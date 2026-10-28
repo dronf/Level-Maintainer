@@ -18,24 +18,27 @@ import org.lwjgl.input.Keyboard;
 public final class ClientProxy extends CommonProxy implements IContainerInputHandler {
     private GuiScreen pending, expected;
     private WorldClient expectedWorld;
+    private int pendingKey;
     @Override public void init() {
-        // Run before NEI's search field and other handlers can consume Ctrl+M.
+        Minecraft mc=Minecraft.func_71410_x();
+        ShortcutSettings.load(mc.field_71412_D);
+        ShortcutSettings.register(mc.field_71474_y);
+        // Run before NEI's search field and other handlers consume the shortcut.
         GuiContainerManager.inputHandlers.addFirst(this);
         FMLCommonHandler.instance().bus().register(this);
     }
-    private static boolean controlDown() {
-        return Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL);
-    }
-    private void queue(Minecraft mc, GuiScreen next) {
+    private void queue(Minecraft mc, GuiScreen next,int key) {
         pending=next;expected=mc.field_71462_r;expectedWorld=mc.field_71441_e;
+        pendingKey=key;
     }
     @SubscribeEvent public void keyInput(InputEvent.KeyInputEvent event) {
         Minecraft mc=Minecraft.func_71410_x();
         // Text-entry screens (including OC terminals) retain their own shortcuts.
         if(mc.field_71462_r!=null || mc.field_71441_e==null || mc.field_71439_g==null)return;
-        if(!Keyboard.getEventKeyState() || Keyboard.getEventKey()!=Keyboard.KEY_M || !controlDown())return;
+        int key=Keyboard.getEventKey();
+        if(!Keyboard.getEventKeyState() || (!ShortcutSettings.context(key)&&!ShortcutSettings.manager(key)))return;
         if(Keyboard.isRepeatEvent() || pending!=null)return;
-        queue(mc,new ManagerGui(""));
+        queue(mc,new ManagerGui(""),key);
     }
     @Override public boolean keyTyped(GuiContainer gui, char ch, int key) {
         Minecraft mc = Minecraft.func_71410_x();
@@ -44,14 +47,14 @@ public final class ClientProxy extends CommonProxy implements IContainerInputHan
             ((MaintainerScreen)mc.field_71462_r).acceptKey(ch,key);return true;
         }
         if (mc.field_71462_r!=gui) return false;
-        if (key != Keyboard.KEY_M || !controlDown()) return false;
+        if (!ShortcutSettings.context(key)&&!ShortcutSettings.manager(key)) return false;
         if (Keyboard.isRepeatEvent() || pending!=null) return true;
-        boolean managerOnly=Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
+        boolean managerOnly=ShortcutSettings.forceManager(key);
         ItemStack stack = managerOnly ? null : GuiContainerManager.getStackMouseOver(gui);
         if (stack == null) {
-            queue(mc,new ManagerGui(""));
+            queue(mc,new ManagerGui(""),key);
         } else {
-            queue(mc,new MaintenanceGui(stack));
+            queue(mc,new MaintenanceGui(stack),key);
         }
         return true;
     }
@@ -61,7 +64,7 @@ public final class ClientProxy extends CommonProxy implements IContainerInputHan
         if(mc.field_71462_r!=expected || mc.field_71441_e!=expectedWorld || mc.field_71439_g==null){
             pending=null;expected=null;expectedWorld=null;return;
         }
-        if(Keyboard.isKeyDown(Keyboard.KEY_M)||controlDown())return;
+        if(Keyboard.isKeyDown(pendingKey)||ShortcutSettings.anyModifier())return;
         GuiScreen next=pending;pending=null;expected=null;expectedWorld=null;
         // Finish the originating keyboard event and release the chord before opening.
         mc.func_147108_a(next);

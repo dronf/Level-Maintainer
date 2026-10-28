@@ -36,7 +36,7 @@ $deps = @{
   JdkDirectory = 'C:/Program Files/Java/jdk-17'
 }
 ./tools/build.ps1 @deps -OutputDirectory 'C:/build/release'
-./tools/verify.ps1 @deps -Jar 'C:/build/release/nei-level-maintainer-1.3.4.jar' -AsmJar 'C:/build/asm-9.8.jar'
+./tools/verify.ps1 @deps -Jar 'C:/build/release/nei-level-maintainer-1.4.0.jar' -AsmJar 'C:/build/asm-9.8.jar'
 ```
 
 Replace example paths with your actual installation. build.ps1 currently expects
@@ -101,6 +101,10 @@ the lightweight Node config-editor suite.
 2. Test both Ctrl keys with M in gameplay. Hold/release: one manager opens.
    Test NEI hover Ctrl+M, Ctrl+Shift+M, and empty-space Ctrl+M.
 3. Confirm chat/OC terminal input keeps its normal behavior.
+   In Options -> Controls, bind Open manager shortcut to an unused key. Open
+   Shortcuts and change the context key off M with modifier NONE. Confirm M and
+   Ctrl no longer trigger this addon, test NONE/CTRL/ALT/SHIFT choices and
+   unbinding, then restart Minecraft to check primary-key/modifier persistence.
 4. In creation and manager editing, test top-row digits, numpad, Backspace/Delete,
    selection replacement, paste, Tab/Shift+Tab and Item/Fluid switching.
    No digits should leak into NEI search. Hover Low/Target/Batch for help.

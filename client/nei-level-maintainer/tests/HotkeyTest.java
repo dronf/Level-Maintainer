@@ -5,6 +5,10 @@ import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.io.File;
+import java.nio.file.Files;
+import net.minecraft.client.settings.GameSettings;
+import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
 import net.minecraft.client.gui.GuiChat;
@@ -23,6 +27,10 @@ public final class HotkeyTest {
     public static final class TestContainer extends GuiContainer {
         private TestContainer(){super(null);}
         @Override protected void func_146976_a(float t,int x,int y){}
+    }
+    public static final class TestSettings extends GameSettings {
+        int saves;
+        @Override public void func_74303_b(){saves++;}
     }
     private static int checks;
     private static void check(boolean b){checks++;if(!b)throw new AssertionError("hotkey check "+checks);}
@@ -104,6 +112,72 @@ public final class HotkeyTest {
             }
             mc.field_71462_r=new GuiChat();keys(Keyboard.KEY_LCONTROL,Keyboard.KEY_M);
             check(!proxy.keyTyped(inventory,'m',Keyboard.KEY_M));release(proxy);check(mc.opens==before);
+
+            // Rebinding removes both the old M trigger and the need for Ctrl.
+            ShortcutSettings.key(ShortcutSettings.CONTEXT,Keyboard.KEY_N);
+            ShortcutSettings.contextModifier=ShortcutSettings.Modifier.NONE;
+            ShortcutSettings.key(ShortcutSettings.MANAGER,Keyboard.KEY_F6);
+            ShortcutSettings.managerModifier=ShortcutSettings.Modifier.NONE;
+            mc.field_71462_r=null;
+            keys(Keyboard.KEY_M);event(proxy,Keyboard.KEY_M,true,false);release(proxy);check(mc.opens==before);
+            keys(Keyboard.KEY_LCONTROL,Keyboard.KEY_M);event(proxy,Keyboard.KEY_M,true,false);release(proxy);check(mc.opens==before);
+            keys(Keyboard.KEY_LCONTROL,Keyboard.KEY_N);event(proxy,Keyboard.KEY_N,true,false);release(proxy);check(mc.opens==before);
+            keys(Keyboard.KEY_N);event(proxy,Keyboard.KEY_N,true,false);tick(proxy);check(mc.opens==before);
+            release(proxy);before++;check(mc.opens==before&&mc.field_71462_r instanceof ManagerGui);
+            mc.field_71462_r=null;keys(Keyboard.KEY_F6);event(proxy,Keyboard.KEY_F6,true,false);
+            release(proxy);before++;check(mc.opens==before&&mc.field_71462_r instanceof ManagerGui);
+            mc.field_71462_r=inventory;keys(Keyboard.KEY_F6);
+            check(proxy.keyTyped(inventory,(char)0,Keyboard.KEY_F6));release(proxy);before++;
+            check(mc.opens==before&&mc.field_71462_r instanceof ManagerGui);
+            keys(Keyboard.KEY_LCONTROL,Keyboard.KEY_F6);check(!ShortcutSettings.manager(Keyboard.KEY_F6));
+            for(int alt:new int[]{Keyboard.KEY_LMENU,Keyboard.KEY_RMENU}){
+                ShortcutSettings.contextModifier=ShortcutSettings.Modifier.ALT;
+                mc.field_71462_r=null;keys(alt,Keyboard.KEY_N);event(proxy,Keyboard.KEY_N,true,false);
+                keys(alt);tick(proxy);check(mc.opens==before);
+                release(proxy);before++;check(mc.opens==before&&mc.field_71462_r instanceof ManagerGui);
+            }
+            ShortcutSettings.contextModifier=ShortcutSettings.Modifier.SHIFT;
+            keys(Keyboard.KEY_LSHIFT,Keyboard.KEY_N);check(ShortcutSettings.context(Keyboard.KEY_N));
+            check(!ShortcutSettings.forceManager(Keyboard.KEY_N));
+            ShortcutSettings.key(ShortcutSettings.CONTEXT,Keyboard.KEY_NONE);
+            keys();check(!ShortcutSettings.context(0));
+            ShortcutSettings.key(ShortcutSettings.MANAGER,-99);check(!ShortcutSettings.manager(-99));
+            ShortcutSettings.key(ShortcutSettings.CONTEXT,Keyboard.KEY_LCONTROL);
+            ShortcutSettings.contextModifier=ShortcutSettings.Modifier.CTRL;
+            keys(Keyboard.KEY_LCONTROL);check(!ShortcutSettings.context(Keyboard.KEY_LCONTROL));
+            ShortcutSettings.key(ShortcutSettings.CONTEXT,Keyboard.KEY_NONE);
+
+            TestSettings settings=(TestSettings)ManagerPauseTest.allocate(TestSettings.class);
+            settings.field_74324_K=new KeyBinding[0];
+            ShortcutSettings.register(settings);ShortcutSettings.register(settings);
+            check(settings.field_74324_K.length==2&&settings.field_74324_K[0]==ShortcutSettings.CONTEXT
+                &&settings.field_74324_K[1]==ShortcutSettings.MANAGER);
+            File directory=Files.createTempDirectory("nei-shortcut-test").toFile();
+            ShortcutSettings.load(directory);
+            check(ShortcutSettings.contextModifier==ShortcutSettings.Modifier.CTRL
+                &&ShortcutSettings.managerModifier==ShortcutSettings.Modifier.NONE);
+            ShortcutSettings.contextModifier=ShortcutSettings.Modifier.NONE;
+            ShortcutSettings.managerModifier=ShortcutSettings.Modifier.ALT;
+            ShortcutSettings.save(settings);check(settings.saves==1);
+            ShortcutSettings.contextModifier=ShortcutSettings.Modifier.CTRL;
+            ShortcutSettings.load(directory);
+            check(ShortcutSettings.contextModifier==ShortcutSettings.Modifier.NONE
+                &&ShortcutSettings.managerModifier==ShortcutSettings.Modifier.ALT);
+            File config=new File(directory,"config/nei-level-maintainer-hotkeys.properties");
+            Files.write(config.toPath(),"contextModifier=BOGUS\nmanagerModifier=CTRL\n".getBytes("UTF-8"));
+            ShortcutSettings.load(directory);check(ShortcutSettings.contextModifier==ShortcutSettings.Modifier.CTRL
+                &&ShortcutSettings.managerModifier==ShortcutSettings.Modifier.CTRL);
+            // Press/release delivery through a shortcut screen cannot leak to NEI.
+            ShortcutGui gui=new ShortcutGui(null);mc.field_71474_y=settings;
+            gui.func_146280_a(mc,640,360);
+            gui.func_146284_a(new net.minecraft.client.gui.GuiButton(1,0,0,"key"));
+            gui.acceptKey((char)0,Keyboard.KEY_LCONTROL);check(ShortcutSettings.CONTEXT.func_151463_i()==0);
+            gui.acceptKey('n',Keyboard.KEY_N);check(ShortcutSettings.CONTEXT.func_151463_i()==Keyboard.KEY_N);
+            gui.func_146284_a(new net.minecraft.client.gui.GuiButton(2,0,0,"modifier"));
+            check(ShortcutSettings.contextModifier==ShortcutSettings.Modifier.ALT);
+            gui.func_146284_a(new net.minecraft.client.gui.GuiButton(1,0,0,"key"));
+            gui.acceptKey((char)0,Keyboard.KEY_ESCAPE);check(ShortcutSettings.CONTEXT.func_151463_i()==0);
+            config.delete();config.getParentFile().delete();directory.delete();
         } finally {keys();field(Keyboard.class,"created").setBoolean(null,false);}
         System.out.println("PASS: gameplay/NEI hotkey dispatch, release, repeat and cancellation: "+checks+" checks");
     }
