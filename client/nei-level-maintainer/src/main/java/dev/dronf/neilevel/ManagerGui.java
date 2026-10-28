@@ -72,7 +72,8 @@ public final class ManagerGui extends MaintainerScreen {
             if(ids[i]==6)b.field_146124_l=!syncing&&(page+1)*rows<visible.size();
             field_146292_n.add(b);
         }
-        field_146292_n.add(new FlatButton(7,left,field_146295_m-24,listWidth,20,"Done"));
+        field_146292_n.add(new FlatButton(7,left,field_146295_m-24,listWidth-108,20,"Done"));
+        field_146292_n.add(new FlatButton(9,left+listWidth-103,field_146295_m-24,103,20,"Shortcuts..."));
     }
     private void refresh() {
         try {
@@ -140,6 +141,7 @@ public final class ManagerGui extends MaintainerScreen {
         int id=button.field_146127_k;
         if(id>=100) {selected=page*rows+id-100;removeArmed=false;rebuild();return;}
         if(id==7) {field_146297_k.func_147108_a(null);return;}
+        if(id==9) {field_146297_k.func_147108_a(new ShortcutGui(this));return;}
         if(id==1) {
             if(syncing){endSession();syncing=false;status="Refresh cancelled. Click Refresh to load current entries.";rebuild();}
             else refresh();return;

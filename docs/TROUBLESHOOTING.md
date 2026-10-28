@@ -29,6 +29,14 @@ NEI overrides take precedence over config.lua. Editing the base file may appear
 ineffective until its override is edited/removed. Invalid overrides are reported
 and preserved. Back up config.lua, settings.lua and nei_overrides.lua together.
 
+## Ctrl+M conflicts with another mod
+
+Use client 1.4.0 and follow [changing shortcuts](USAGE.md#changing-shortcuts).
+Bind the independent manager key in Minecraft Controls, then use its Shortcuts
+screen to move the context key off M and select NONE if Ctrl is used by another
+tool. Changing only the primary context key retains its configured modifier.
+No Lua update is required. Mouse and modifier-only primary keys are unsupported.
+
 ## Keyboard, duplicate digits, NEI search input or white button stripe
 
 Keep exactly one current addon JAR. The client includes focus isolation, top-row

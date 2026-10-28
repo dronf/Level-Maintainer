@@ -59,8 +59,8 @@ intervals in settings.lua if you need a faster response.**
 Use one OC directory, normally /home, for the program and its data. Run:
 
 ```sh
-wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.4/installer.lua installer.lua
-installer nei-level-maintainer-1.3.4
+wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.4.0/installer.lua installer.lua
+installer nei-level-maintainer-1.4.0
 ```
 
 The installer selects the tag's commit to download one matching script set. It
@@ -80,8 +80,8 @@ Run `Maintainer` from its installation directory if auto-start is off. Stop with
 
 ## Install the client JAR in Prism
 
-1. Download `nei-level-maintainer-1.3.4.jar` from the
-   [release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.3.4).
+1. Download `nei-level-maintainer-1.4.0.jar` from the
+   [release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.4.0).
 2. Close Minecraft. Select the Prism instance and open its Minecraft folder.
 3. Replace the previous NEI Level Maintainer addon in `.minecraft/mods`.
    Keep exactly one addon version, plus the normal NEI/OC dependencies.
@@ -92,8 +92,17 @@ config.lua.example and settings.lua.example so extraction does not replace your
 existing configuration. Check downloads against the release's SHA256SUMS file:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath 'C:/Downloads/nei-level-maintainer-1.3.4.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath 'C:/Downloads/nei-level-maintainer-1.4.0.jar'
 ```
+
+## Configure shortcuts after a conflict
+
+Client 1.4.0 exposes primary keys in Options -> Controls -> NEI Level Maintainer.
+If Ctrl+M conflicts, bind Open manager shortcut to an unused keyboard key first;
+its modifier defaults to NONE. Open the manager with that key and choose
+Shortcuts to change keys and modifiers. See the
+[complete instructions](USAGE.md#changing-shortcuts). Existing 1.3.4 Lua scripts
+need no update for this feature. Keep your saved polling settings.
 
 ## Screen UUID
 

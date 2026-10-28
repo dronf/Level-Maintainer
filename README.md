@@ -4,12 +4,12 @@ Maintain AE2 item and fluid stock in **GT New Horizons 2.9**, using an
 OpenComputers program and an optional client-only NEI addon. Add, edit, pause,
 resume, and remove entries from Minecraft without editing Lua by hand.
 
-**Current package: 1.3.4.** Fresh installs and runtime fallbacks now favor low
-server load: slow polling, long retry/cache intervals, and an empty maintained
-list. Existing saved settings remain preserved during updates.
+**Current package: 1.4.0.** Client shortcuts are configurable in Minecraft
+Controls and the manager's Shortcuts screen, including independent keys and
+NONE/CTRL/ALT/SHIFT modifiers. Existing low-load Lua behavior is unchanged.
 
-[Download release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.3.4)
-- [Client JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.3.4/nei-level-maintainer-1.3.4.jar)
+[Download release](https://github.com/dronf/Level-Maintainer/releases/tag/nei-level-maintainer-1.4.0)
+- [Client JAR](https://github.com/dronf/Level-Maintainer/releases/download/nei-level-maintainer-1.4.0/nei-level-maintainer-1.4.0.jar)
 - [Changelog](CHANGELOG.md)
 
 ## OpenComputers hardware
@@ -41,16 +41,16 @@ intervals in settings.lua if you need a faster response.**
 2. Run these commands from your OC installation directory, normally /home:
 
    ```sh
-   wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.3.4/installer.lua installer.lua
-   installer nei-level-maintainer-1.3.4
+   wget -f https://raw.githubusercontent.com/dronf/Level-Maintainer/nei-level-maintainer-1.4.0/installer.lua installer.lua
+   installer nei-level-maintainer-1.4.0
    ```
 
 3. Close Minecraft. Replace the previous addon in the Prism instance's
-   `.minecraft/mods` with `nei-level-maintainer-1.3.4.jar`. Keep exactly one
+   `.minecraft/mods` with `nei-level-maintainer-1.4.0.jar`. Keep exactly one
    addon version. Install it on the client; the server uses its normal GTNH mods.
 4. Run `Maintainer` on OC and open its screen once. **Ctrl+M** during normal
    gameplay opens the manager. Over an NEI item it opens that item's editor;
-   **Ctrl+Shift+M** opens the manager. Either Ctrl key works; release the shortcut.
+   **Ctrl+Shift+M** opens the manager. These are the defaults; use [configurable shortcuts](docs/USAGE.md#changing-shortcuts) to avoid conflicts.
 5. Enter the active GPU's screen UUID and Refresh. The manager loads the actual
    computer configuration. Select an entry to Edit, Pause/Resume, or Remove.
 
@@ -91,7 +91,7 @@ Built against Minecraft 1.7.10, Forge 10.13.4.1614, NEI 2.8.155-GTNH and
 OpenComputers 1.12.64-GTNH from GTNH 2.9 RC2, emitting Java 8 bytecode. This
 does not establish compatibility with every older pack or other modpack.
 
-Clients 1.3.4, 1.3.3 and 1.3.2 use the same protocol. Updated Lua also works with client
+Clients 1.4.0, 1.3.4, 1.3.3 and 1.3.2 use the same protocol. Updated Lua also works with client
 1.3.1; numeric hover help requires 1.3.2+. Client 1.3.0+ supports batched listing;
 the slower 1.2.0 receiver fallback remains. Update both sides from older packages.
 

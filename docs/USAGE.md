@@ -2,7 +2,7 @@
 
 [Overview](../README.md) - [Installation](INSTALLATION.md) - [Configuration](CONFIGURATION.md)
 
-## Client shortcuts
+## Default client shortcuts
 
 | Context | Shortcut | Result |
 | --- | --- | --- |
@@ -11,10 +11,61 @@
 | Inventory/NEI, no hovered item | Ctrl+M | Manager |
 | Inventory/NEI, with or without an item | Ctrl+Shift+M | Manager |
 
-Either Ctrl/Shift key works. Release M and Ctrl to open the screen. Holding the
+Either Ctrl/Shift key works with the defaults. Release the bound key and all
+Ctrl/Alt/Shift keys to open the screen. Holding the
 shortcut does not repeatedly open it. Chat, OC terminals and other text-entry
 screens retain their shortcuts; close them first. Changing screens/worlds
 before release cancels a pending open.
+
+## Changing shortcuts
+
+Client 1.4.0 adds a **NEI Level Maintainer** category to Minecraft's
+**Options -> Controls**:
+
+- **Editor or manager shortcut**: context-sensitive editor/manager action;
+  default M with CTRL modifier.
+- **Open manager shortcut**: always the manager, including over an NEI item;
+  default unbound with NONE modifier. Assign an unused keyboard key to enable it.
+
+Controls changes the primary keys. To change the required modifiers, open the
+manager and click **Shortcuts...**. Click a key button and press the new key;
+Escape while capturing unbinds it. Click its modifier button to cycle
+NONE, CTRL, ALT, SHIFT. Choose a regular keyboard key and set modifiers separately;
+modifier-only and mouse bindings are not supported. Done saves changes immediately.
+The Minecraft Controls button opens the standard controls menu.
+
+For conflicts with Matter Manipulator's Ctrl modifier and a universal terminal
+on M:
+
+1. In Options -> Controls, bind Open manager shortcut to an unused key such as F6.
+2. Press/release that key without modifiers, then click Shortcuts.
+3. Change Context key to an unused key such as N and its modifier to NONE, or
+   unbind it if only the dedicated manager shortcut is needed. Keep Manager on
+   the chosen key with modifier NONE. Click Done.
+
+After moving/unbinding the context key, M remains available to the terminal and
+Ctrl remains available to other tools. Pick keys that are actually unused in
+your pack; the addon cannot cancel another mod's use of an identical binding.
+The vanilla conflict display compares primary keys, not our separate modifiers.
+
+With NONE, holding Ctrl or Alt prevents activation. With CTRL/ALT, adding Shift
+selects the manager instead of a hovered item. With SHIFT as the context modifier,
+Shift activates the editor normally; use the independent manager binding for an
+always-manager action. A dedicated manager binding takes precedence if both
+configured shortcuts match. Text-entry screens retain their own keys.
+
+Primary keys are saved in Minecraft's options.txt. Modifiers are stored in
+config/nei-level-maintainer-hotkeys.properties, separate from the UUID/numeric
+preferences file. To edit modifiers manually, close Minecraft and use uppercase:
+
+```properties
+contextModifier=NONE
+managerModifier=NONE
+```
+
+Restart after manually editing the file. GUI changes take effect immediately.
+Defaults remain Ctrl+M / Ctrl+Shift+M unless you change them; this client-only
+update needs no Lua update and preserves the low-load script settings.
 
 ## Add, edit, pause and remove
 
